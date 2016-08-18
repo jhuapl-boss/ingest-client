@@ -16,7 +16,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class Validator(metaclass=ABCMeta):
+class Validator(ABCMeta):
     def __init__(self):
         """
         A class to implement the ingest job configuration file validator

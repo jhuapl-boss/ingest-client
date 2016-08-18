@@ -16,7 +16,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class Configuration(metaclass=ABCMeta):
+class Configuration(ABCMeta):
     def __init__(self, file_path):
         """
         A class to implement the object store for cuboid storage

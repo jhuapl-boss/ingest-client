@@ -16,7 +16,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class PathProcessor(metaclass=ABCMeta):
+class PathProcessor(ABCMeta):
     def __init__(self):
         """
         A class to implement a path processor which converts from parameters to an absolute file path

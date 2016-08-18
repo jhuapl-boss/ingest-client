@@ -16,7 +16,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class Backend(metaclass=ABCMeta):
+class Backend(ABCMeta):
     def __init__(self):
         """
         A class to implement a backend that supports the ingest service

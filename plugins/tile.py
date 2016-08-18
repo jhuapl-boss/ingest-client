@@ -16,7 +16,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class TileProcessor(metaclass=ABCMeta):
+class TileProcessor(ABCMeta):
     def __init__(self):
         """
         A class to implement a tile processor which outputs a list of file handles for uploading
