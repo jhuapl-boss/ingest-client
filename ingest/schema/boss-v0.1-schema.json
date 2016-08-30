@@ -1,0 +1,473 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "validator": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "name",
+        "validator"
+      ]
+    },
+    "client": {
+      "type": "object",
+      "properties": {
+        "backend": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "class": {
+              "type": "string"
+            },
+            "host": {
+              "type": "string"
+            },
+            "protocol": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "class",
+            "host",
+            "protocol"
+          ]
+        },
+        "tile_processor": {
+          "type": "object",
+          "properties": {
+            "class": {
+              "type": "string"
+            },
+            "params": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "required": [
+            "class",
+            "params"
+          ]
+        },
+        "file_processor": {
+          "type": "object",
+          "properties": {
+            "class": {
+              "type": "string"
+            },
+            "params": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "required": [
+            "class",
+            "params"
+          ]
+        }
+      },
+      "required": [
+        "backend",
+        "tile_processor",
+        "file_processor"
+      ]
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "create_properties": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "description"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "create",
+            "create_properties"
+          ]
+        },
+        "experiment": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "create_properties": {
+              "type": "object",
+              "properties": {
+                "coordinate_frame": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "create": {
+                      "type": "boolean"
+                    },
+                    "create_properties": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "x_start": {
+                          "type": "integer"
+                        },
+                        "x_stop": {
+                          "type": "integer"
+                        },
+                        "y_start": {
+                          "type": "integer"
+                        },
+                        "y_stop": {
+                          "type": "integer"
+                        },
+                        "z_start": {
+                          "type": "integer"
+                        },
+                        "z_stop": {
+                          "type": "integer"
+                        },
+                        "x_voxel_size": {
+                          "type": "integer"
+                        },
+                        "y_voxel_size": {
+                          "type": "integer"
+                        },
+                        "z_voxel_size": {
+                          "type": "integer"
+                        },
+                        "voxel_unit": {
+                          "type": "string"
+                        },
+                        "time_step": {
+                          "type": "integer"
+                        },
+                        "time_step_unit": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "description",
+                        "x_start",
+                        "x_stop",
+                        "y_start",
+                        "y_stop",
+                        "z_start",
+                        "z_stop",
+                        "x_voxel_size",
+                        "y_voxel_size",
+                        "z_voxel_size",
+                        "voxel_unit",
+                        "time_step",
+                        "time_step_unit"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "create",
+                    "create_properties"
+                  ]
+                },
+                "description": {
+                  "type": "string"
+                },
+                "num_hierarchy_levels": {
+                  "type": "integer"
+                },
+                "hierarchy_method": {
+                  "type": "string"
+                },
+                "max_time_sample": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "coordinate_frame",
+                "description",
+                "num_hierarchy_levels",
+                "hierarchy_method",
+                "max_time_sample"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "create",
+            "create_properties"
+          ]
+        },
+        "channel": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "create_properties": {
+              "type": "object",
+              "properties": {
+                "coordinate_frame": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "create_properties": {
+                      "type": "object",
+                      "properties": {
+                        "create": {
+                          "type": "boolean"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "x_start": {
+                          "type": "integer"
+                        },
+                        "x_stop": {
+                          "type": "integer"
+                        },
+                        "y_start": {
+                          "type": "integer"
+                        },
+                        "y_stop": {
+                          "type": "integer"
+                        },
+                        "z_start": {
+                          "type": "integer"
+                        },
+                        "z_stop": {
+                          "type": "integer"
+                        },
+                        "x_voxel_size": {
+                          "type": "integer"
+                        },
+                        "y_voxel_size": {
+                          "type": "integer"
+                        },
+                        "z_voxel_size": {
+                          "type": "integer"
+                        },
+                        "voxel_unit": {
+                          "type": "string"
+                        },
+                        "time_step": {
+                          "type": "integer"
+                        },
+                        "time_step_unit": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "create",
+                        "description",
+                        "x_start",
+                        "x_stop",
+                        "y_start",
+                        "y_stop",
+                        "z_start",
+                        "z_stop",
+                        "x_voxel_size",
+                        "y_voxel_size",
+                        "z_voxel_size",
+                        "voxel_unit",
+                        "time_step",
+                        "time_step_unit"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "create_properties"
+                  ]
+                },
+                "description": {
+                  "type": "string"
+                },
+                "num_hierarchy_levels": {
+                  "type": "integer"
+                },
+                "hierarchy_method": {
+                  "type": "string"
+                },
+                "max_time_sample": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "coordinate_frame",
+                "description",
+                "num_hierarchy_levels",
+                "hierarchy_method",
+                "max_time_sample"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "create",
+            "create_properties"
+          ]
+        }
+      },
+      "required": [
+        "collection",
+        "experiment",
+        "channel"
+      ]
+    },
+    "ingest_job": {
+      "type": "object",
+      "properties": {
+        "custom_params": {
+          "type": "object",
+          "properties": {
+            "filename": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "filename"
+          ]
+        },
+        "range": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "y": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "z": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "t": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "t"
+          ]
+        },
+        "offset": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            },
+            "z": {
+              "type": "integer"
+            },
+            "t": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "t"
+          ]
+        },
+        "tile_size": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            },
+            "z": {
+              "type": "integer"
+            },
+            "t": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "t"
+          ]
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "custom_params",
+        "range",
+        "offset",
+        "tile_size",
+        "channels"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "client",
+    "database",
+    "ingest_job"
+  ]
+}

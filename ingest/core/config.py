@@ -12,21 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
+from abc import ABCMeta
 
-from abc import ABCMeta, abstractmethod
+import six
+from ingest.core.validator import Validator
 
 
-class Configuration(metaclass=ABCMeta):
-    def __init__(self, file_path):
+@six.add_metaclass(ABCMeta)
+class Configuration(object):
+    def __init__(self, config_file=None):
         """
         A class to implement the object store for cuboid storage
 
         Args:
-            file_path(str): Absolute path to an ingest configuration file
+            config_file(str): Absolute path to an ingest configuration file
         """
-        self.config_file = file_path
-        self.config_data = self.load(file_path)
+        self.config_file = config_file
+        self.config_data = None
         self.validator = None
+        self.schema = None
         self.backend = None
 
         # Properties of ingest after creation
@@ -34,19 +39,40 @@ class Configuration(metaclass=ABCMeta):
         self.ingest_job_id = None
         self.upload_job_queue = None
 
-    @abstractmethod
-    def load(self, file_path):
+        # If a configuration file was provided, load it now
+        if config_file:
+            self.load(config_file)
+
+    def load(self, config_file):
         """
-        Method to load the configuration file and select the correct validator and backend
+        Method to load the configuration file, the configuration schema, and select the correct validator and backend
 
         Args:
-            file_path(str): Absolute path to an ingest configuration file
+            config_file(str): Absolute path to an ingest configuration file
 
         Returns:
             None
 
         """
-        return NotImplemented
+        with open(config_file, 'r') as file_handle:
+            self.config_data = json.load(file_handle)
+
+        # Setup Validator while sanitizing input
+        if any(x in self.config_data["schema"]["validator"] for x in [";", ".", "import"]):
+            raise ValueError("Schema Validator Class contains dangerous syntax. Please only list the Class Name.")
+        else:
+            self.validator = Validator.factory(self.config_data["schema"]["validator"], config_file)
+
+        # Setup Backend  while sanitizing input
+
+    def to_json(self):
+        """
+        Method to return a JSON string containing the configuration
+
+        Returns:
+            (str): JSON encoded config data
+        """
+        return json.dumps(self.config_data)
 
     def validate(self):
         """
@@ -73,7 +99,6 @@ class Configuration(metaclass=ABCMeta):
         """
         try:
             self.credentials, self.ingest_job_id, self.upload_job_queue = self.backend.create(self.config_data)
-            return True
         except Exception as e:
             raise Exception("Failed to create ingest job using the backend service: {}".format(e))
 
@@ -92,7 +117,6 @@ class Configuration(metaclass=ABCMeta):
         try:
             self.ingest_job_id = ingest_job_id
             self.credentials, self.upload_job_queue = self.backend.resume(ingest_job_id)
-            return True
         except Exception as e:
             raise Exception("Failed to create ingest job using the backend service: {}".format(e))
 

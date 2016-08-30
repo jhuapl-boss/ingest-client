@@ -13,27 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABCMeta, abstractmethod
 
-
-class PathProcessor(metaclass=ABCMeta):
+class Engine(object):
     def __init__(self):
         """
-        A class to implement a path processor which converts from parameters to an absolute file path
+        A class to implement the core upload client workflow engine
 
         Args:
-        """
 
-    @abstractmethod
-    def process(self, params):
         """
-        Method to load the configuration file and select the correct validator and backend
+        self.backend = None
+        self.config = None
+        self.validator = None
+        self.tile_processor = None
+        self.path_processor = None
 
+    def load_configuration(self, file_path):
+        """
+        Method to load a configuration file and setup the workflow engine
         Args:
-            params(list(dict)): A list of dictionaries of parameters to convert to a file path
+            file_path (str): Absolute path to a config file
 
         Returns:
-            (list(str): A list of absolute file paths that correspond to each parameter set
-
+            None
         """
-        return NotImplemented
+        # Load Config file and validate
+
+    def check_user(self):
+        pass
+        # Method to check if the user is the correct one

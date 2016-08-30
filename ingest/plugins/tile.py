@@ -12,11 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import six
 from abc import ABCMeta, abstractmethod
 
 
-class TileProcessor(metaclass=ABCMeta):
+@six.add_metaclass(ABCMeta)
+class TileProcessor(object):
     def __init__(self):
         """
         A class to implement a tile processor which outputs a list of file handles for uploading
@@ -25,16 +26,35 @@ class TileProcessor(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def process(self, params, file_paths):
+    def setup(self, parameters):
+        """
+        Method to initialize the tile processor based on custom parameters from the configuration file
+
+        e.g. Open a multi-page tiff, connect to a database, etc.
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+        """
+        return NotImplemented
+
+    @abstractmethod
+    def process(self, file_path, x_index, y_index, z_index, t_index=None, parameters=None):
         """
         Method to load the configuration file and select the correct validator and backend
 
         Args:
-            params(list(dict)): A list of dictionaries of parameters to convert to a file path
-            file_paths(list(str)): A list of absolute file paths that correspond to each parameter set
+            file_path(str): An absolute file path for the specified tile
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+            parameters(dict): A dictionary of custom parameters
 
         Returns:
-            (list(str)): A list of file handles for each param/file path
+            (io.BufferedReader): A file handle for the specified tile
 
         """
         return NotImplemented

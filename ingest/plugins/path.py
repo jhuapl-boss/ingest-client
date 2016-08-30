@@ -12,45 +12,49 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import six
 from abc import ABCMeta, abstractmethod
 
 
-class Backend(metaclass=ABCMeta):
+@six.add_metaclass(ABCMeta)
+class PathProcessor(object):
     def __init__(self):
         """
-        A class to implement a backend that supports the ingest service
+        A class to implement a path processor, which converts from parameters and tile indices
+        to an absolute file path
 
         Args:
-
         """
 
     @abstractmethod
-    def create(self, data):
+    def setup(self, parameters):
         """
-        Method to upload the config data to the backend to create an ingest job
+        Method to initialize the path processor based on custom parameters from the configuration file
+
+        e.g. Connect to a database, etc.
 
         Args:
-            data(dict): A dictionary of configuration parameters
+            parameters (dict): Parameters for the dataset to be processed
 
         Returns:
-            (dict, int, str): The returned credentials, ingest_job_id, and SQS upload_job_queue
-
-
+            None
         """
         return NotImplemented
 
     @abstractmethod
-    def resume(self, ingest_job_id):
+    def process(self, x_index, y_index, z_index, t_index=None, parameters=None):
         """
-        Method to upload the config data to the backend to create an ingest job
+        Method to compute the file path for the indicated tile
 
         Args:
-            ingest_job_id(int): The ID of the job you'd like to resume processing
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+            parameters(dict): A dictionary of custom parameters
 
         Returns:
-            (dict, str): The returned credentials and SQS upload_job_queue for the provided ingest job id
-
+            (str): An absolute file path that contains the specified data
 
         """
         return NotImplemented

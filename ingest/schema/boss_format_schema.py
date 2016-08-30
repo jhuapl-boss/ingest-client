@@ -12,30 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
+from pkg_resources import resource_filename
+import os
 
-from abc import ABCMeta, abstractmethod
+# Simple Script to format a schema file for posting to the Boss via the admin/API browser
+schema_file = os.path.join(resource_filename("ingest", "schema"), "boss-v0.1-schema.json")
 
+with open(schema_file, 'r') as file_handle:
+    data = json.load(file_handle)
 
-class Validator(metaclass=ABCMeta):
-    def __init__(self):
-        """
-        A class to implement the ingest job configuration file validator
+post_str = json.dumps(data)
 
-        Args:
-
-        """
-
-    @abstractmethod
-    def validate(self, data):
-        """
-        Method to load the configuration file and select the correct validator and backend
-
-        Args:
-            data(dict): A dictionary of configuration parameters
-
-        Returns:
-            (dict): Dictionary of "info", "warning", "error" messages
-
-
-        """
-        return NotImplemented
+print(post_str)
