@@ -1,4 +1,3 @@
-# Copyright 2016 NeuroData (http://neurodata.io)
 # Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,32 +11,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from ingest.core.config import Configuration
 
 
 class Engine(object):
-    def __init__(self):
+    def __init__(self, config_file=None):
         """
         A class to implement the core upload client workflow engine
 
         Args:
+            config_file (str): Absolute path to a config file
 
         """
-        self.backend = None
         self.config = None
+        self.backend = None
         self.validator = None
         self.tile_processor = None
         self.path_processor = None
 
-    def load_configuration(self, file_path):
+        if config_file:
+            self.load_configuration(config_file)
+
+    def load_configuration(self, config_file):
         """
         Method to load a configuration file and setup the workflow engine
         Args:
-            file_path (str): Absolute path to a config file
+            config_file (str): Absolute path to a config file
 
         Returns:
             None
         """
         # Load Config file and validate
+        self.config = Configuration(config_file)
+
+        # Get backend
+        self.backend = self.config.get_backend()
+
+        # Get validator
+        self.validator = self.config.get_validator()
 
     def check_user(self):
         pass

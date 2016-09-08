@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "boss-ingest-v01",
   "type": "object",
   "properties": {
     "schema": {
@@ -448,11 +449,8 @@
             "t"
           ]
         },
-        "channels": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "channel": {
+          "type": "string"
         }
       },
       "required": [

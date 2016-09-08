@@ -14,7 +14,6 @@
     "tile_processor": {
       "class": "time_series_tiff",
       "params": {
-
       }
     },
     "file_processor": {
@@ -51,7 +50,6 @@
             "voxel_unit": "nanometers",
             "time_step": 0,
             "time_step_unit": "microseconds"
-
           }
         },
         "description": "",
@@ -103,7 +101,7 @@
     "offset": {
       "x": 0,
       "y": 0,
-      "z": 0,tower
+      "z": 0,
       "t": 0
     },
     "tile_size": {
@@ -112,7 +110,7 @@
       "z": 1,
       "t": 1500
     },
-    "channels": ["my_ch_1"]
+    "channel": "my_ch_1"
   }
 }
 

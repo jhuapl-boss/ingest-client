@@ -1,4 +1,3 @@
-# Copyright 2016 NeuroData (http://neurodata.io)
 # Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,22 +15,21 @@ from abc import ABCMeta, abstractmethod
 import six
 import jsonschema
 import json
-import requests
 
 
 @six.add_metaclass(ABCMeta)
 class Validator(object):
-    def __init__(self, config_file):
+    def __init__(self, config_data):
         """
         A class to implement the ingest job configuration file validator
 
         Args:
-            config_file(str): Absolute path to the config file
+            config_data(dict): Dictionary of configuration
 
         """
-        with open(config_file, 'r') as file_handle:
-            self.config = json.load(file_handle)
+        self.config = config_data
 
+        # Schema to be populated by backend
         self.schema = None
 
     def validate_schema(self):
@@ -44,6 +42,9 @@ class Validator(object):
             str: An error message if schema validation fails
 
         """
+        if not self.schema:
+            raise ValueError("Schema has not been populated yet. Cannot validate.")
+
         try:
             jsonschema.validate(self.data, self.schema)
         except jsonschema.ValidationError as e:
@@ -88,61 +89,32 @@ class Validator(object):
         return NotImplemented
 
     @staticmethod
-    def factory(validator_str, config_file):
+    def factory(validator_str, config_data):
         """
         Method to return a validator class based on a string
         Args:
-            validator_str:
+            validator_str(str): Class name for the validator to use
+            config_data(dict): Dictionary containing configuration data
 
         Returns:
 
         """
         if validator_str == "BossValidatorV01":
-            return BossValidatorV01(config_file)
+            return BossValidatorV01(config_data)
         else:
             return ValueError("Unsupported validator: {}".format(validator_str))
 
 
 class BossValidatorV01(Validator):
-    def __init__(self, config_file):
+    def __init__(self, config_data):
         """
         A class to implement the ingest job configuration file validator for the Boss (docs.theBoss.io)
 
         Args:
-            config_file(str): Absolute path to the config file
+            config_data(dict): Configuration dictionary
 
         """
-        Validator.__init__(self, config_file)
-
-    def validate_schema(self):
-        """
-        Method to validate the JSON data against the schema
-
-        Args:
-
-        Returns:
-            str: An error message if schema validation fails
-
-        """
-        # Get Schema
-        r = requests.get('{}://{}/ingest/schema/{}/{}/'.format(self.config['client']['backend']['protocol'],
-                                                               self.config['client']['backend']['host'],
-                                                               self.config['schema']['name'],
-                                                               self.config['schema']['version']),
-                         headers={'accept': 'application/json'})
-
-        if r.status_code != 200:
-            return "Failed to download schema. Name: {} Version: {}".format(self.config['schema']['name'],
-                                                                            self.config['schema']['version'])
-        else:
-            self.schema = json.loads(r.json()['schema'])
-
-        try:
-            jsonschema.validate(self.config, self.schema)
-        except jsonschema.ValidationError as e:
-            return e
-
-        return None
+        Validator.__init__(self, config_data)
 
     def validate_properties(self):
         """

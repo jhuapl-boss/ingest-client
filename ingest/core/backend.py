@@ -1,4 +1,3 @@
-# Copyright 2016 NeuroData (http://neurodata.io)
 # Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +14,7 @@
 import six
 from abc import ABCMeta, abstractmethod
 import requests
+import json
 
 
 @six.add_metaclass(ABCMeta)
@@ -24,6 +24,7 @@ class Backend(object):
         A class to implement a backend that supports the ingest service
 
         Args:
+            config (dict): Dictionary of parameters from the "backend" section of the config file
 
         """
         self.ingest_job_id = None
@@ -105,6 +106,38 @@ class Backend(object):
         """
         return NotImplemented
 
+    @abstractmethod
+    def get_schema(self):
+        """
+        Method to get the schema for the configuration file.
+
+        This should typically be stored on the backend server to ensure correctness and consistency
+
+        Args:
+            None
+
+        Returns:
+            (dict): The parsed schema file in a dictionary
+
+
+        """
+        return NotImplemented
+
+    @staticmethod
+    def factory(backend_str, config_data):
+        """
+        Method to return a validator class based on a string
+        Args:
+            backend_str (str): String of the classname
+
+        Returns:
+
+        """
+        if backend_str == "BossBackend":
+            return BossBackend(config_data)
+        else:
+            return ValueError("Unsupported Backend: {}".format(backend_str))
+
 
 class BossBackend(Backend):
     def __init__(self, config):
@@ -114,9 +147,9 @@ class BossBackend(Backend):
         Args:
 
         """
+        Backend.__init__(self, config)
         self.host = None
-        self.config = config
-        self.setup()
+        self.api_version = "v0.5"
 
     def setup(self):
         """
@@ -143,7 +176,7 @@ class BossBackend(Backend):
 
 
         """
-        r = requests.post('{}/ingest/job/'.format(self.host), json=config_dict)
+        r = requests.post('{}/{}/ingest/job/'.format(self.host, self.api_version), json=config_dict)
 
         if r.status_code != 201:
             return "Failed to create ingest job. Verify configuration file."
@@ -193,3 +226,28 @@ class BossBackend(Backend):
             None
         """
         return NotImplemented
+
+    def get_schema(self):
+        """
+        Method to get the schema for the configuration file.
+
+        This should typically be stored on the backend server to ensure correctness and consistency
+
+        Args:
+            None
+
+        Returns:
+            (dict): The parsed schema file in a dictionary
+
+        """
+        # Get Schema
+        r = requests.get('{}/{}/ingest/schema/{}/{}/'.format(self.host, self.api_version,
+                                                             self.config['schema']['name'],
+                                                             self.config['schema']['version']),
+                         headers={'accept': 'application/json'})
+
+        if r.status_code != 200:
+            return "Failed to download schema. Name: {} Version: {}".format(self.config['schema']['name'],
+                                                                            self.config['schema']['version'])
+        else:
+            return json.loads(r.json()['schema'])
