@@ -13,12 +13,16 @@
 # limitations under the License.
 import os
 import unittest
-import jsonschema
-import responses
 import json
 import tempfile
+import responses
 
-from ingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
+from ..core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
+from ..core.validator import BossValidatorV01
+from ..core.backend import BossBackend
+from ..plugins.path import TestPathProcessor
+from ..plugins.tile import TestTileProcessor
+
 from pkg_resources import resource_filename
 
 
@@ -131,12 +135,46 @@ class TestBossConfigurationGenerator(unittest.TestCase):
             self.assertEqual(data["schema"]["validator"], "BossValidatorV01")
 
 
-
 class ConfigurationTestMixin(object):
 
     def test_create(self):
-        """Method to test the ConfigurationGenerator class"""
-        pass
+        """Test creating a Configuration object"""
+        config = Configuration(self.config_file)
+
+        assert isinstance(config, Configuration)
+        assert isinstance(config.tile_processor_class, TestTileProcessor)
+        assert isinstance(config.path_processor_class, TestPathProcessor)
+
+    def test_to_json(self):
+        """Test json serialization"""
+        config = Configuration(self.config_file)
+
+        json_data = config.to_json()
+
+        json_dict = json.loads(json_data)
+
+        assert json_dict == self.example_config_data
+
+    def test_get_validator(self):
+        """Test dynamically getting the validator class"""
+        config = Configuration(self.config_file)
+
+        v = config.get_validator()
+
+        assert isinstance(v, BossValidatorV01)
+
+    @responses.activate
+    def test_get_backend(self):
+        """Test dynamically getting the validator class"""
+        responses.add(responses.GET, 'https://api.theboss.io/v0.5/ingest/schema/boss/0.1/',
+                      json={"schema": self.schema}, status=200)
+
+        config = Configuration(self.config_file)
+
+        b = config.get_backend()
+        b.setup(self.api_token)
+
+        assert isinstance(b, BossBackend)
 
 
 class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
@@ -145,8 +183,15 @@ class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
     def setUpClass(cls):
         schema_file = os.path.join(resource_filename("ingest", "schema"), "boss-v0.1-schema.json")
         with open(schema_file, 'r') as file_handle:
-            s = json.load(file_handle)
-            cls.mock_data = {"schema": json.dumps(s)}
+            cls.schema = json.load(file_handle)
+
+        cls.config_file = os.path.join(resource_filename("ingest", "test/data"), "boss-v0.1-test.json")
+
+        with open(cls.config_file, 'rt') as example_file:
+            cls.example_config_data = json.load(example_file)
+
+        # Mock api token since you can't bank on ndio being configured
+        cls.api_token = "adlsfjadsf"
 
 
 

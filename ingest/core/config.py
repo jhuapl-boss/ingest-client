@@ -18,6 +18,7 @@ import six
 from six.moves import cPickle as pickle
 from ingest.core.validator import Validator
 from ingest.core.backend import Backend
+import importlib
 
 
 @six.python_2_unicode_compatible
@@ -174,7 +175,10 @@ class ConfigurationGenerator(object):
             None
         """
         with open(file_path, 'wb') as file_handle:
-            pickle.dump(self.__dict__, file_handle, 2, fix_imports=True)
+            if six.PY3:
+                pickle.dump(self.__dict__, file_handle, 2, fix_imports=True)
+            else:
+                pickle.dump(self.__dict__, file_handle, 2)
 
     @abstractmethod
     def setup(self):
@@ -229,14 +233,12 @@ class ConfigurationGenerator(object):
 
 
 class BossConfigurationGenerator(ConfigurationGenerator):
-    def __init__(self, create_collection=False, create_experiment=False, create_channel=False):
+    def __init__(self, create_channel=False):
+        self.create_channel = create_channel
         ConfigurationGenerator.__init__(self)
 
         self.name = "Boss Ingest v0.1"
         self.description = "Configuration Generator for the Boss ingest service v0.1"
-        self.create_collection = create_collection
-        self.create_experiment = create_experiment
-        self.create_channel = create_channel
 
     def setup(self):
         """Method to setup instance by populating the correct data/property objects"""
@@ -289,56 +291,94 @@ class BossConfigurationGenerator(ConfigurationGenerator):
                                       )
 
         # Database Section
-        if self.create_collection:
-            collection_create_props = ConfigPropertyObject("create_properties",
-                                                           {"description": ""},
-                                                           {"description": "A description of what the collection stores"},
-                                                           "Properties used to create a collection"
-                                                           )
+        if self.create_channel:
+            channel_create_props = ConfigPropertyObject("create_properties",
+                                                        {"description": "",
+                                                         "default_time_step": 0,
+                                                         "datatype": "uint8"},
+                                                        {"description": "A description of what the channel stores",
+                                                         "default_time_step": "The time step value to use if omitted from API requests.  For non-time series data this should always be 0.",
+                                                         "datatype": "The datatype (bit-depth) of the channel.  Supported values: uint8, uint16"},
+                                                        "Properties used to create a new channel."
+                                                        )
         else:
-            collection_create_props = {}
-        database_collection = ConfigPropertyObject("collection",
-                                                   {"name": "",
-                                                    "create": self.create_collection,
-                                                    "create_properties": collection_create_props},
-                                                   {"name": "collection name",
-                                                    "create": "boolean indicating if a NEW collection should be created",
-                                                    "create_properties": "Properties for creating a new collection"},
-                                                   "Properties for the collection in which that data will be stored"
-                                                   )
-
-        if self.create_experiment:
-            experiment_create_props = ConfigPropertyObject("create_properties",
-                                                           {"description": ""},
-                                                           {"description": "A description of what the collection stores"},
-                                                           "Properties used to create a collection"
-                                                           )
-        else:
-            experiment_create_props = {}
-        database_experiment = ConfigPropertyObject("experiment",
-                                                   {"name": "",
-                                                    "create": self.create_experiment,
-                                                    "create_properties": experiment_create_props},
-                                                   {"name": "experiment name",
-                                                    "create": "boolean indicating if a NEW experiment should be created",
-                                                    "create_properties": "Properties for creating a new experiment"},
-                                                   "Properties for the experiment in which that data will be stored"
-                                                   )
+            channel_create_props = ConfigPropertyObject("create_properties",
+                                                        {"description": None,
+                                                         "default_time_step": None,
+                                                         "datatype": None},
+                                                        {"description": "A description of what the channel stores",
+                                                         "default_time_step": "The time step value to use if omitted from API requests.  For non-time series data this should always be 0.",
+                                                         "datatype": "The datatype (bit-depth) of the channel.  Supported values: uint8, uint16"},
+                                                        "Properties used to create a new channel."
+                                                        )
+        database_channel = ConfigPropertyObject("channel",
+                                                {"name": "",
+                                                 "create": self.create_channel,
+                                                 "create_properties": channel_create_props},
+                                                {"name": "collection name",
+                                                 "create": "boolean indicating if a NEW channel should be created",
+                                                 "create_properties": "Properties for creating a new channel"},
+                                                "Properties for the channel in which data will be stored"
+                                                )
 
         database = ConfigPropertyObject("database",
-                                        {"collection": database_collection,
-                                         "experiment": database_experiment,
-                                         "channel": collection_create_props},
-                                        {"collection": "The collection properties",
-                                         "create": "boolean indicating if a NEW collection should be created",
-                                         "create_properties": "Properties for creating a new collection"},
-                                        "Properties describing where in the database data should be ingested"
+                                        {"collection": "",
+                                         "experiment": "",
+                                         "channel": database_channel},
+                                        {"collection": "The collection name containing the experiment and channel where data will be written",
+                                         "experiment": "The experiment name containing the channel where data will be written",
+                                         "channel": "Properties of the channel where data will be written"},
+                                        "Properties describing where in the database data should be written"
                                         )
 
         # Ingest Job Section
+        ingest_job_extent = ConfigPropertyObject("extent",
+                                                 {"x": [0, 1],
+                                                  "y": [0, 1],
+                                                  "z": [0, 1],
+                                                  "t": [0, 1]},
+                                                 {"x": "The spatial extent (in pixels) in the x-dimension. Python convention - start inclusive, stop exclusive",
+                                                  "y": "The spatial extent (in pixels) in the y-dimension. Python convention - start inclusive, stop exclusive",
+                                                  "z": "The spatial extent (in pixels) in the z-dimension. Python convention - start inclusive, stop exclusive",
+                                                  "t": "The spatial extent (in pixels) in the t-dimension. Python convention - start inclusive, stop exclusive"},
+                                                 "The spatial extent of the data to be uploaded.  This does not have to be the entire dataset."
+                                                 )
+        ingest_job_offset = ConfigPropertyObject("offset",
+                                                 {"x": 0,
+                                                  "y": 0,
+                                                  "z": 0,
+                                                  "t": 0},
+                                                 {"x": "The spatial offset (in pixels) in the x-dimension where the ingest job begins",
+                                                  "y": "The spatial offset (in pixels) in the y-dimension where the ingest job begins",
+                                                  "z": "The spatial offset (in pixels) in the z-dimension where the ingest job begins",
+                                                  "t": "The spatial offset (in pixels) in the t-dimension where the ingest job begins",},
+                                                 "The spatial offset of the data to be uploaded in relation to the total dataset stored or to be stored in the channel"
+                                                 )
+        ingest_job_tile_size = ConfigPropertyObject("tile_size",
+                                                 {"x": 4096,
+                                                  "y": 4096,
+                                                  "z": 1,
+                                                  "t": 0},
+                                                 {"x": "The size (in pixels) in the x-dimension of an individual image file",
+                                                  "y": "The size (in pixels) in the y-dimension of an individual image file",
+                                                  "z": "The size (in pixels) in the z-dimension of an individual image file",
+                                                  "t": "The number of time samples in a single file"},
+                                                 "The dimensions of the individual image data files that will be uploaded to the Boss"
+                                                 )
+        ingest_job = ConfigPropertyObject("ingest_job",
+                                          {"extent": ingest_job_extent,
+                                           "offset": ingest_job_offset,
+                                           "tile_size": ingest_job_tile_size},
+                                          {"extent": "The spatial extent of the data to be uploaded.  This does not have to be the entire dataset.",
+                                           "offset": "The spatial offset of the data to be uploaded in relation to the total dataset stored or to be stored in the channel",
+                                           "tile_size": "The dimensions of the individual image data files that will be uploaded to the Boss"},
+                                          "The properties defining what part of the dataset will be ingested"
+                                          )
 
         self.add_property_object(schema)
         self.add_property_object(client)
+        self.add_property_object(database)
+        self.add_property_object(ingest_job)
 
 
 class Configuration(object):
@@ -352,11 +392,8 @@ class Configuration(object):
         self.config_file = config_file
         self.config_data = None
         self.schema = None
-
-        # Properties of ingest after creation
-        self.credentials = None
-        self.ingest_job_id = None
-        self.upload_job_queue = None
+        self.tile_processor_class = None
+        self.path_processor_class = None
 
         # If a configuration file was provided, load it now
         if config_file:
@@ -376,6 +413,32 @@ class Configuration(object):
         with open(config_file, 'r') as file_handle:
             self.config_data = json.load(file_handle)
 
+        package, class_name = self.config_data["client"]["tile_processor"]["class"].rsplit('.', 1)
+        tile_module = importlib.import_module(package)
+        tile_class = getattr(tile_module, class_name)
+        self.tile_processor_class = tile_class()
+
+        package, class_name = self.config_data["client"]["path_processor"]["class"].rsplit('.', 1)
+        path_module = importlib.import_module(package)
+        path_class = getattr(path_module, class_name)
+        self.path_processor_class = path_class()
+
+    def get_tile_processor_params(self):
+        """Method to get the tile processor parameter dictionary
+
+        Returns:
+            (dict): Dictionary of params from the config file
+        """
+        return self.config_data["client"]["tile_processor"]["params"]
+
+    def get_path_processor_params(self):
+        """Method to get the path processor parameter dictionary
+
+        Returns:
+            (dict): Dictionary of params from the config file
+        """
+        return self.config_data["client"]["path_processor"]["params"]
+
     def get_validator(self):
         """
         Method to get a validator instance based on the configuration
@@ -393,7 +456,7 @@ class Configuration(object):
         else:
             return Validator.factory(self.config_data["schema"]["validator"], self.config_data)
 
-    def get_backend(self):
+    def get_backend(self, backend_api_token=None):
         """
         Method to get a backend instance based on the configuration
 
@@ -409,7 +472,10 @@ class Configuration(object):
             raise ValueError("Backend Class contains dangerous syntax. Please only list the Class Name.")
         else:
             backend = Backend.factory(self.config_data["client"]["backend"]["class"],
-                                      self.config_data["client"]["backend"])
+                                      self.config_data)
+
+        # Setup the backend
+        backend.setup(backend_api_token)
 
         # Get the schema file now that you have a backend
         self.schema = backend.get_schema()

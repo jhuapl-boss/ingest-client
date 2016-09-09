@@ -46,7 +46,7 @@ class Validator(object):
             raise ValueError("Schema has not been populated yet. Cannot validate.")
 
         try:
-            jsonschema.validate(self.data, self.schema)
+            jsonschema.validate(self.config, self.schema)
         except jsonschema.ValidationError as e:
             return e
 

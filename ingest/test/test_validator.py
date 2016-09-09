@@ -14,10 +14,9 @@
 import os
 import unittest
 import jsonschema
-import responses
 import json
 
-from ingest.core.validator import Validator, BossValidatorV01
+from ..core.validator import Validator, BossValidatorV01
 from pkg_resources import resource_filename
 
 
@@ -25,49 +24,43 @@ class BossValidatorV01TestMixin(object):
 
     def test_factory(self):
         """Method to test creating an instance from the factory"""
-        v = Validator.factory("BossValidatorV01", os.path.join(resource_filename("ingest", "schema"),
-                                                               "boss-v0.1-time-series-example.json"))
+        v = Validator.factory("BossValidatorV01", self.example_config_data)
 
         assert isinstance(v, BossValidatorV01) is True
 
     def test_load(self):
         """Method to test creating an instance from the factory"""
-        v = BossValidatorV01(os.path.join(resource_filename("ingest", "schema"), "boss-v0.1-time-series-example.json"))
+        v = BossValidatorV01(self.example_config_data)
         assert v.config["schema"]["version"] == "0.1"
         assert v.config["schema"]["name"] == "boss"
 
-    @responses.activate
     def test_validate_schema(self):
-        """Method to test creating an instance from the factory"""
-        responses.add(responses.GET, 'https://api.theboss.io/ingest/schema/boss/0.1/',
-                      json=self.mock_data, status=200)
-
-        v = BossValidatorV01(os.path.join(resource_filename("ingest", "schema"), "boss-v0.1-time-series-example.json"))
+        """Method to tests validating a good schema"""
+        v = BossValidatorV01(self.example_config_data)
+        v.schema = self.schema
         resp = v.validate_schema()
 
         assert not resp
 
-    @responses.activate
     def test_validate_bad_schema(self):
-        """Method to test creating an instance from the factory"""
-        responses.add(responses.GET, 'https://api.theboss.io/ingest/schema/boss/0.1/',
-                      json=self.mock_data, status=200)
+        """Method to test validating a bad schema"""
 
-        v = BossValidatorV01(os.path.join(resource_filename("ingest", "test/data"),
-                                          "boss-v0.1-missing-field.json"))
+        with open(os.path.join(resource_filename("ingest", "test/data"), "boss-v0.1-missing-field.json"),
+                  'rt') as example_file:
+            config_data = json.load(example_file)
+        v = BossValidatorV01(config_data)
+        v.schema = self.schema
         resp = v.validate_schema()
 
         assert isinstance(resp, jsonschema.ValidationError)
 
-    @responses.activate
     def test_validate(self):
         """Method to test validation method"""
         # TODO: Complete after validation fully implemented
-        responses.add(responses.GET, 'https://api.theboss.io/ingest/schema/boss/0.1/',
-                      json=self.mock_data, status=200)
 
-        v = BossValidatorV01(os.path.join(resource_filename("ingest", "schema"),
-                                          "boss-v0.1-time-series-example.json"))
+        v = BossValidatorV01(self.example_config_data)
+
+        v.schema = self.schema
         result = v.validate()
 
         assert len(result['info']) == 2
@@ -81,8 +74,11 @@ class TestBossValidatorV01(BossValidatorV01TestMixin, unittest.TestCase):
     def setUpClass(cls):
         schema_file = os.path.join(resource_filename("ingest", "schema"), "boss-v0.1-schema.json")
         with open(schema_file, 'r') as file_handle:
-            s = json.load(file_handle)
-            cls.mock_data = {"schema": json.dumps(s)}
+            cls.schema = json.load(file_handle)
+
+        with open(os.path.join(resource_filename("ingest", "schema"),
+                  "boss-v0.1-time-series-example.json"), 'rt') as example_file:
+            cls.example_config_data = json.load(example_file)
 
 
 

@@ -15,6 +15,10 @@ import six
 from abc import ABCMeta, abstractmethod
 import requests
 import json
+import boto3
+import hashlib
+from six.moves import configparser
+import os
 
 
 @six.add_metaclass(ABCMeta)
@@ -27,9 +31,9 @@ class Backend(object):
             config (dict): Dictionary of parameters from the "backend" section of the config file
 
         """
-        self.ingest_job_id = None
         self.config = config
-        self.setup()
+        self.sqs = None
+        self.queue = None
 
     @abstractmethod
     def setup(self):
@@ -106,6 +110,23 @@ class Backend(object):
         """
         return NotImplemented
 
+    def setup_upload_queue(self, credentials, upload_queue, region="us-east-1"):
+        """
+        Method to create a connection to the upload task queue
+
+        Args:
+            credentials(dict): AWS credentials
+            upload_queue(str): The URL for the upload SQS queue
+            region(str): The AWS region where the SQS queue exists
+
+        Returns:
+            None
+
+        """
+        self.sqs = boto3.resource('sqs', region_name=region, aws_access_key_id=credentials["id"],
+                                  aws_secret_access_key=credentials["secret"])
+        self.queue = self.sqs.Queue(url=upload_queue)
+
     @abstractmethod
     def get_schema(self):
         """
@@ -120,6 +141,24 @@ class Backend(object):
             (dict): The parsed schema file in a dictionary
 
 
+        """
+        return NotImplemented
+
+    # TODO: Possibly remove if ndingest lib is used as a dependency
+    @abstractmethod
+    def encode_object_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
+        """
+
+        Args:
+            project_info(list): A list of strings containing the project/data model information for where data belongs
+            resolution(int): The level of the resolution hierarchy.  Typically 0
+            x_index(int): The x tile index
+            y_index(int): The y tile index
+            z_index(int): The z tile index
+            t_index(int): The time index
+
+        Returns:
+            (str): The object key to use for uploading to the tile bucket
         """
         return NotImplemented
 
@@ -144,14 +183,17 @@ class BossBackend(Backend):
         """
         A class to implement a backend that supports the ingest service
 
+        api_token is a dictionary with keys:
+
         Args:
 
         """
-        Backend.__init__(self, config)
         self.host = None
+        self.api_headers = None
+        Backend.__init__(self, config)
         self.api_version = "v0.5"
 
-    def setup(self):
+    def setup(self, api_token=None):
         """
         Method to configure the backend based on configuration parameters in the config file
 
@@ -162,7 +204,19 @@ class BossBackend(Backend):
 
 
         """
-        self.host = "{}://{}".format(self.config["protocol"], self.config["host"])
+        self.host = "{}://{}".format(self.config["client"]["backend"]["protocol"],
+                                     self.config["client"]["backend"]["host"])
+
+        # Load API creds from ndio if needed.
+        if not api_token:
+            try:
+                cfg_parser = configparser.ConfigParser()
+                cfg_parser.read(os.path.expanduser("~/.ndio/ndio.cfg"))
+                api_token = cfg_parser.get("Project Service", "token")
+            except KeyError as e:
+                print("API Token not provided and ndio is not configured (config file located at ~/.ndio/ndio.cfg. Failed to setup backend: {}".format(e))
+
+        self.api_headers = {'Authorization': 'Token ' + api_token, 'Accept': 'application/json'}
 
     def create(self, config_dict):
         """
@@ -176,14 +230,14 @@ class BossBackend(Backend):
 
 
         """
-        r = requests.post('{}/{}/ingest/job/'.format(self.host, self.api_version), json=config_dict)
+        r = requests.post('{}/{}/ingest/job/'.format(self.host, self.api_version), json=config_dict,
+                          headers=self.api_headers)
 
         if r.status_code != 201:
             return "Failed to create ingest job. Verify configuration file."
         else:
-            self.ingest_job_id = r.json()['id']
+            return r.json()['ingest_job_id']
 
-    @abstractmethod
     def join(self, ingest_job_id):
         """
         Method to join an ingest job upload
@@ -194,13 +248,22 @@ class BossBackend(Backend):
             ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int, dict, str): The job status, AWS credentials, and SQS upload_job_queue for the provided ingest job id
+            (int, dict, str, str): The job status, AWS credentials,
+                                    and SQS upload_job_queue for the provided ingest job id, and the tile bucket name
 
 
         """
-        return NotImplemented
+        r = requests.get('{}/{}/ingest/job/{}'.format(self.host, self.api_version, ingest_job_id),
+                          headers=self.api_headers)
 
-    @abstractmethod
+        if r.status_code != 200:
+            raise Exception("Failed to join ingest job.")
+        else:
+            result = r.json()
+            if result['ingest_job_status'] < 2:
+                self.setup_upload_queue(result['credentials'], result['upload_queue'], region="us-east-1")
+            return result['ingest_job_status'], result['credentials'], result['upload_queue'], result['tile_bucket']
+
     def cancel(self, ingest_job_id):
         """
         Method to cancel an ingest job
@@ -213,9 +276,12 @@ class BossBackend(Backend):
 
 
         """
-        return NotImplemented
+        r = requests.delete('{}/{}/ingest/job/{}'.format(self.host, self.api_version, ingest_job_id),
+                            headers=self.api_headers)
 
-    @abstractmethod
+        if r.status_code != 200:
+            raise Exception("Failed to join ingest job.")
+
     def get_task(self):
         """
         Method to get an upload task
@@ -223,9 +289,11 @@ class BossBackend(Backend):
         Args:
 
         Returns:
-            None
+            (str, str, dict): message_id, receipt_handle, message contents
         """
-        return NotImplemented
+        # TODO: Possibly remove if ndingest lib is used as a dependency
+        msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=5)
+        return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)
 
     def get_schema(self):
         """
@@ -244,10 +312,32 @@ class BossBackend(Backend):
         r = requests.get('{}/{}/ingest/schema/{}/{}/'.format(self.host, self.api_version,
                                                              self.config['schema']['name'],
                                                              self.config['schema']['version']),
-                         headers={'accept': 'application/json'})
+                         headers=self.api_headers)
 
         if r.status_code != 200:
             return "Failed to download schema. Name: {} Version: {}".format(self.config['schema']['name'],
                                                                             self.config['schema']['version'])
         else:
-            return json.loads(r.json()['schema'])
+            return r.json()['schema']
+
+    def encode_object_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
+        """
+
+        Args:
+            project_info(list): A list of strings containing the project/data model information for where data belongs
+            resolution(int): The level of the resolution hierarchy.  Typically 0
+            x_index(int): The x tile index
+            y_index(int): The y tile index
+            z_index(int): The z tile index
+            t_index(int): The time index
+
+        Returns:
+            (str): The object key to use for uploading to the tile bucket
+        """
+        proj_str = six.u("&".join(project_info))
+        base_key = six.u("{}&{}&{}&{}&{}&{}".format(proj_str, resolution, x_index, y_index, z_index, t_index))
+
+        hashm = hashlib.md5()
+        hashm.update(base_key.encode())
+
+        return six.u("{}&{}".format(hashm.hexdigest(), base_key))

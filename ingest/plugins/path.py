@@ -14,6 +14,8 @@
 # limitations under the License.
 import six
 from abc import ABCMeta, abstractmethod
+from pkg_resources import resource_filename
+import os
 
 
 @six.add_metaclass(ABCMeta)
@@ -42,7 +44,7 @@ class PathProcessor(object):
         return NotImplemented
 
     @abstractmethod
-    def process(self, x_index, y_index, z_index, t_index=None, parameters=None):
+    def process(self, x_index, y_index, z_index, t_index=None):
         """
         Method to compute the file path for the indicated tile
 
@@ -51,10 +53,44 @@ class PathProcessor(object):
             y_index(int): The tile index in the Y dimension
             z_index(int): The tile index in the Z dimension
             t_index(int): The time index
-            parameters(dict): A dictionary of custom parameters
 
         Returns:
             (str): An absolute file path that contains the specified data
 
         """
         return NotImplemented
+
+
+class TestPathProcessor(PathProcessor):
+    """Example processor for unit tests"""
+    def setup(self, parameters):
+        """
+        Method to initialize the path processor based on custom parameters from the configuration file
+
+        e.g. Connect to a database, etc.
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+
+    def process(self, x_index, y_index, z_index, t_index=None):
+        """
+        Method to compute the file path for the indicated tile
+
+        Test processor always returns path to the same dummy file!
+
+        Args:
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (str): An absolute file path that contains the specified data
+
+        """
+        return os.path.join(resource_filename("ingest", "test/data"), "test_tile.png")

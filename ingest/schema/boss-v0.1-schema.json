@@ -1,6 +1,5 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "title": "boss-ingest-v01",
   "type": "object",
   "properties": {
     "schema": {
@@ -48,7 +47,7 @@
             "protocol"
           ]
         },
-        "tile_processor": {
+        "path_processor": {
           "type": "object",
           "properties": {
             "class": {
@@ -64,7 +63,7 @@
             "params"
           ]
         },
-        "file_processor": {
+        "tile_processor": {
           "type": "object",
           "properties": {
             "class": {
@@ -83,154 +82,18 @@
       },
       "required": [
         "backend",
-        "tile_processor",
-        "file_processor"
+        "path_processor",
+        "tile_processor"
       ]
     },
     "database": {
       "type": "object",
       "properties": {
         "collection": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "create": {
-              "type": "boolean"
-            },
-            "create_properties": {
-              "type": "object",
-              "properties": {
-                "description": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "description"
-              ]
-            }
-          },
-          "required": [
-            "name",
-            "create",
-            "create_properties"
-          ]
+          "type": "string"
         },
         "experiment": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "create": {
-              "type": "boolean"
-            },
-            "create_properties": {
-              "type": "object",
-              "properties": {
-                "coordinate_frame": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "create": {
-                      "type": "boolean"
-                    },
-                    "create_properties": {
-                      "type": "object",
-                      "properties": {
-                        "description": {
-                          "type": "string"
-                        },
-                        "x_start": {
-                          "type": "integer"
-                        },
-                        "x_stop": {
-                          "type": "integer"
-                        },
-                        "y_start": {
-                          "type": "integer"
-                        },
-                        "y_stop": {
-                          "type": "integer"
-                        },
-                        "z_start": {
-                          "type": "integer"
-                        },
-                        "z_stop": {
-                          "type": "integer"
-                        },
-                        "x_voxel_size": {
-                          "type": "integer"
-                        },
-                        "y_voxel_size": {
-                          "type": "integer"
-                        },
-                        "z_voxel_size": {
-                          "type": "integer"
-                        },
-                        "voxel_unit": {
-                          "type": "string"
-                        },
-                        "time_step": {
-                          "type": "integer"
-                        },
-                        "time_step_unit": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "description",
-                        "x_start",
-                        "x_stop",
-                        "y_start",
-                        "y_stop",
-                        "z_start",
-                        "z_stop",
-                        "x_voxel_size",
-                        "y_voxel_size",
-                        "z_voxel_size",
-                        "voxel_unit",
-                        "time_step",
-                        "time_step_unit"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "name",
-                    "create",
-                    "create_properties"
-                  ]
-                },
-                "description": {
-                  "type": "string"
-                },
-                "num_hierarchy_levels": {
-                  "type": "integer"
-                },
-                "hierarchy_method": {
-                  "type": "string"
-                },
-                "max_time_sample": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "coordinate_frame",
-                "description",
-                "num_hierarchy_levels",
-                "hierarchy_method",
-                "max_time_sample"
-              ]
-            }
-          },
-          "required": [
-            "name",
-            "create",
-            "create_properties"
-          ]
+          "type": "string"
         },
         "channel": {
           "type": "object",
@@ -244,100 +107,20 @@
             "create_properties": {
               "type": "object",
               "properties": {
-                "coordinate_frame": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "create_properties": {
-                      "type": "object",
-                      "properties": {
-                        "create": {
-                          "type": "boolean"
-                        },
-                        "description": {
-                          "type": "string"
-                        },
-                        "x_start": {
-                          "type": "integer"
-                        },
-                        "x_stop": {
-                          "type": "integer"
-                        },
-                        "y_start": {
-                          "type": "integer"
-                        },
-                        "y_stop": {
-                          "type": "integer"
-                        },
-                        "z_start": {
-                          "type": "integer"
-                        },
-                        "z_stop": {
-                          "type": "integer"
-                        },
-                        "x_voxel_size": {
-                          "type": "integer"
-                        },
-                        "y_voxel_size": {
-                          "type": "integer"
-                        },
-                        "z_voxel_size": {
-                          "type": "integer"
-                        },
-                        "voxel_unit": {
-                          "type": "string"
-                        },
-                        "time_step": {
-                          "type": "integer"
-                        },
-                        "time_step_unit": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "create",
-                        "description",
-                        "x_start",
-                        "x_stop",
-                        "y_start",
-                        "y_stop",
-                        "z_start",
-                        "z_stop",
-                        "x_voxel_size",
-                        "y_voxel_size",
-                        "z_voxel_size",
-                        "voxel_unit",
-                        "time_step",
-                        "time_step_unit"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "name",
-                    "create_properties"
-                  ]
-                },
                 "description": {
                   "type": "string"
                 },
-                "num_hierarchy_levels": {
+                "default_time_step": {
                   "type": "integer"
                 },
-                "hierarchy_method": {
+                "datatype": {
                   "type": "string"
-                },
-                "max_time_sample": {
-                  "type": "integer"
                 }
               },
               "required": [
-                "coordinate_frame",
                 "description",
-                "num_hierarchy_levels",
-                "hierarchy_method",
-                "max_time_sample"
+                "default_time_step",
+                "datatype"
               ]
             }
           },
@@ -357,18 +140,7 @@
     "ingest_job": {
       "type": "object",
       "properties": {
-        "custom_params": {
-          "type": "object",
-          "properties": {
-            "filename": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "filename"
-          ]
-        },
-        "range": {
+        "extent": {
           "type": "object",
           "properties": {
             "x": {
@@ -448,17 +220,12 @@
             "z",
             "t"
           ]
-        },
-        "channel": {
-          "type": "string"
         }
       },
       "required": [
-        "custom_params",
-        "range",
+        "extent",
         "offset",
-        "tile_size",
-        "channels"
+        "tile_size"
       ]
     }
   },
