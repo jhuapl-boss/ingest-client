@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import absolute_import
-from ingest.core.backend import BossBackend, Backend
+from ingest.core.engine import Engine
+from ingest.core.validator import Validator, BossValidatorV01
+from ingest.core.backend import Backend, BossBackend
+from ingest.core.config import Configuration
 from ingest.test.aws import Setup
 
 import os
@@ -20,7 +23,8 @@ import unittest
 import json
 import responses
 from pkg_resources import resource_filename
-import six
+import tempfile
+import boto3
 
 
 class ResponsesMixin(object):
@@ -52,104 +56,66 @@ class ResponsesMixin(object):
         responses.add(responses.DELETE, 'https://api.theboss.io/v0.5/ingest/job/23', status=200)
 
 
-class BossBackendTestMixin(object):
+class EngineTestMixin(object):
 
-    def test_factory(self):
+    def test_create_instance(self):
         """Method to test creating an instance from the factory"""
-        b = Backend.factory("BossBackend", self.example_config_data)
+        engine = Engine(self.config_file, self.api_token)
 
-        assert isinstance(b, BossBackend) is True
+        assert isinstance(engine, Engine) is True
+        assert isinstance(engine.backend, Backend) is True
+        assert isinstance(engine.backend, BossBackend) is True
+        assert isinstance(engine.validator, Validator) is True
+        assert isinstance(engine.validator, BossValidatorV01) is True
+        assert isinstance(engine.config, Configuration) is True
+
+        # Schema loaded
+        assert isinstance(engine.config.schema, dict) is True
+        assert engine.config.schema["type"] == "object"
 
     def test_setup(self):
-        """Method to test setup instance"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
+        """Test setting up the engine - no error should occur"""
+        engine = Engine(self.config_file, self.api_token)
 
-        assert b.host == "https://api.theboss.io"
+        with tempfile.NamedTemporaryFile() as temp_file:
+            engine.setup(temp_file.name)
 
-    def test_get_schema(self):
-        """Method to test validating a bad schema"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
-        schema = b.get_schema()
-
-        assert isinstance(schema, dict) is True
-        assert schema["type"] == "object"
-
-    def test_setup_upload_queue(self):
-        """Test connecting the backend to the upload queue"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
-
-        b.setup_upload_queue(self.aws_creds, self.queue_url)
-
-        assert b.queue.url == self.queue_url
-
-    def test_create(self):
+    def test_create_job(self):
         """Test creating an ingest job - mock server response"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
+        engine = Engine(self.config_file, self.api_token)
 
-        id = b.create(self.example_config_data)
+        engine.create_job()
 
-        assert id == 23
+        assert engine.ingest_job_id == 23
 
     def test_join(self):
         """Test joining an existing ingest job - mock server response"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
+        engine = Engine(self.config_file, self.api_token, 23)
 
-        status, creds, queue_url, tile_bucket = b.join(23)
+        engine.join()
 
-        assert b.queue.url == self.queue_url
-        assert status == 1
-        assert isinstance(creds, dict)
-        assert queue_url == self.queue_url
-        assert tile_bucket == self.tile_bucket_name
+        assert engine.upload_job_queue == self.queue_url
+        assert engine.job_status == 1
 
-    def test_delete(self):
-        """Test deleting an existing ingest job - mock server response"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
-
-        b.cancel(23)
-
-    def test_get_task(self):
+    def test_run(self):
         """Test getting a task from the upload queue"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
+        engine = Engine(self.config_file, self.api_token, 23)
+        engine.join()
+        engine.run()
 
-        b.join(23)
+        # Check for tile to exist
+        s3 = boto3.resource('s3')
+        tile_bucket = s3.Bucket(self.tile_bucket_name)
 
-        msg_id, rx_handle, msg_body = b.get_task()
+        with tempfile.NamedTemporaryFile() as test_file:
+            with open(test_file.name, 'wb') as data:
+                tile_bucket.download_fileobj("03ca58a12ec662954ac12e06517d4269&1&2&3&0&5&6&1&0", data)
 
-        assert isinstance(msg_id, str)
-        assert isinstance(rx_handle, str)
-
-        assert msg_body == self.setup_helper.test_msg
-
-    def test_encode_object_key(self):
-        """Test encoding an object key"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
-
-        b.join(23)
-
-        msg_id, rx_handle, msg_body = b.get_task()
-
-        proj = [str(msg_body['collection']), str(msg_body['experiment']), str(msg_body['channel'])]
-        key = b.encode_object_key(proj,
-                                  msg_body['resolution'],
-                                  msg_body['x_tile'],
-                                  msg_body['y_tile'],
-                                  msg_body['z_tile'],
-                                  msg_body['time_sample'],
-                                  )
-
-        assert key == six.u("03ca58a12ec662954ac12e06517d4269&1&2&3&0&5&6&1&0")
+                # Make sure the key was valid an data was loaded into the file handles
+                assert data.tell() == 182300
 
 
-class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):
+class TestEngine(EngineTestMixin, ResponsesMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -158,8 +124,8 @@ class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):
             s = json.load(file_handle)
             cls.mock_schema = {"schema": s}
 
-        with open(os.path.join(resource_filename("ingest", "schema"),
-                  "boss-v0.1-time-series-example.json"), 'rt') as example_file:
+        cls.config_file = os.path.join(resource_filename("ingest", "test/data"), "boss-v0.1-test.json")
+        with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
         # Setup AWS stuff

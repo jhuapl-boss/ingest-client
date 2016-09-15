@@ -11,12 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import absolute_import
+
 import os
 import unittest
 import jsonschema
 import json
 
-from ..core.validator import Validator, BossValidatorV01
+from ingest.core.validator import Validator, BossValidatorV01
 from pkg_resources import resource_filename
 
 

@@ -293,7 +293,10 @@ class BossBackend(Backend):
         """
         # TODO: Possibly remove if ndingest lib is used as a dependency
         msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=5)
-        return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)
+        if msg:
+            return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)
+        else:
+            return None, None, None
 
     def get_schema(self):
         """
@@ -315,8 +318,8 @@ class BossBackend(Backend):
                          headers=self.api_headers)
 
         if r.status_code != 200:
-            return "Failed to download schema. Name: {} Version: {}".format(self.config['schema']['name'],
-                                                                            self.config['schema']['version'])
+            raise Exception("Failed to download schema. Name: {} Version: {}".format(self.config['schema']['name'],
+                                                                                     self.config['schema']['version']))
         else:
             return r.json()['schema']
 
@@ -334,7 +337,7 @@ class BossBackend(Backend):
         Returns:
             (str): The object key to use for uploading to the tile bucket
         """
-        proj_str = six.u("&".join(project_info))
+        proj_str = six.u("&".join([str(x) for x in project_info]))
         base_key = six.u("{}&{}&{}&{}&{}&{}".format(proj_str, resolution, x_index, y_index, z_index, t_index))
 
         hashm = hashlib.md5()

@@ -11,17 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import absolute_import
+
 import os
 import unittest
 import json
 import tempfile
 import responses
 
-from ..core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
-from ..core.validator import BossValidatorV01
-from ..core.backend import BossBackend
-from ..plugins.path import TestPathProcessor
-from ..plugins.tile import TestTileProcessor
+from ingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
+from ingest.core.validator import BossValidatorV01
+from ingest.core.backend import BossBackend
+from ingest.plugins.path import TestPathProcessor
+from ingest.plugins.tile import TestTileProcessor
 
 from pkg_resources import resource_filename
 

@@ -130,7 +130,7 @@ class Setup(object):
                          'x_tile': 5,
                          'y_tile': 6,
                          'z_tile': 1,
-                         'time_range': 0
+                         'time_sample': 0
                          }
 
         client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(self.test_msg))

@@ -1,4 +1,3 @@
-# Copyright 2016 NeuroData (http://neurodata.io)
 # Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +23,7 @@ class TileProcessor(object):
 
         Args:
         """
+        self.parameters = None
 
     @abstractmethod
     def setup(self, parameters):
@@ -43,7 +43,7 @@ class TileProcessor(object):
     @abstractmethod
     def process(self, file_path, x_index, y_index, z_index, t_index=None):
         """
-        Method to load the configuration file and select the correct validator and backend
+        Method to take a file path and tile indices and return a file handle to the correct data
 
         Args:
             file_path(str): An absolute file path for the specified tile
@@ -59,7 +59,7 @@ class TileProcessor(object):
         return NotImplemented
 
 
-class TestTileProcessor(object):
+class TestTileProcessor(TileProcessor):
     """Example processor for unit tests"""
 
     def setup(self, parameters):
@@ -78,7 +78,7 @@ class TestTileProcessor(object):
 
     def process(self, file_path, x_index, y_index, z_index, t_index=None):
         """
-        Method to load the configuration file and select the correct validator and backend
+        Method to take a file path and tile indices and return a file handle to the correct data
 
         Always just returns the handle to the file
 

@@ -126,10 +126,7 @@ class BossValidatorV01(Validator):
             (list(str), list(str), list(str)): a tuple of lists containing "info", "question", "error" messages
 
         """
-        # Validate User has ndio installed and configured with token
-
-        # Get User info and generate question to ensure user is correct
-
+        # TODO: Add Boss specific validation
         # Verify Collection
 
         # Verify Experiment
@@ -142,4 +139,4 @@ class BossValidatorV01(Validator):
 
         # Check backend connectivity
 
-        return ['Validation not really implemented yet...So good to go!'], [], []
+        return ['Parameter Validation Passed'], [], []

@@ -14,17 +14,19 @@
 from ingest.core.config import Configuration
 import boto3
 from six.moves import input
+import logging
+import datetime
 
 
 class Engine(object):
-    def __init__(self, config_file=None, ingest_job_id=None, backend_api_token=None):
+    def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None):
         """
         A class to implement the core upload client workflow engine
 
         Args:
             config_file (str): Absolute path to a config file
             ingest_job_id (int): ID of the ingest job you want to work on
-            backend_api_token (str): The authorization token for the Backend
+            backend_api_token (str): The authorization token for the Backend if used
 
         """
         self.config = None
@@ -65,20 +67,37 @@ class Engine(object):
         self.validator.schema = self.config.schema
 
         # Setup tile processor
-        self.tile_processor = self.config.tile_processor_class()
+        self.tile_processor = self.config.tile_processor_class
         self.tile_processor.setup(self.config.get_tile_processor_params())
 
         # Setup path processor
-        self.path_processor = self.config.path_processor_class()
+        self.path_processor = self.config.path_processor_class
         self.path_processor.setup(self.config.get_path_processor_params())
 
-    def set_api_token(self, token):
-        """Method to manually set the API token"""
-        self.api_token = token
-
-    def setup(self):
+    def setup(self, log_file=None):
         """Method to setup the Engine by finishing configuring subclasses and validating the schema"""
-        self.validator.validate()
+        if not log_file:
+            log_file = 'ingest_log{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            datefmt='%m-%d %H:%M',
+                            filename=log_file,
+                            filemode='a')
+        logging.getLogger('ingest-client').addHandler(logging.StreamHandler())
+        logger = logging.getLogger('ingest-client')
+
+        msgs = self.validator.validate()
+
+        for msg in msgs["info"]:
+            logger.info(msg)
+
+        if msgs["error"]:
+            for msg in msgs["error"]:
+                logger.info(msg)
+            raise Exception("Validation Failed: {}".format(" - ".join(msgs["error"])))
+
+        return msgs["question"]
 
     def create_job(self):
         """
@@ -91,7 +110,7 @@ class Engine(object):
 
 
         """
-        self.ingest_job_id = self.backend.create(self.config)
+        self.ingest_job_id = self.backend.create(self.config.to_json())
 
     def join(self):
         """
@@ -133,23 +152,38 @@ class Engine(object):
         Returns:
 
         """
+        # Set up logger
+        logger = logging.getLogger('ingest-client')
+
         # Make sure you are joined
         if not self.credentials:
-            raise Exception("Cannot start ingest engine.  You must first join an ingest job!")
+            msg = "Cannot start ingest engine.  You must first join an ingest job!"
+            logger.error(msg)
+            raise Exception(msg)
 
         if self.job_status == 0:
-            raise Exception("Cannot start ingest engine.  Ingest job is not ready yet")
+            msg = "Cannot start ingest engine.  Ingest job is not ready yet"
+            logger.error(msg)
+            raise Exception(msg)
 
         if self.job_status == 2:
-            print("Ingest job already completed. Skipping ingest engine start.")
-            return
+            msg = "Ingest job already completed. Skipping ingest engine start."
+            logger.info(msg)
+            raise Exception(msg)
 
         # Do some work
-        running = True
-        while running:
+        while True:
             try:
                 # Get a task
                 message_id, receipt_handle, msg = self.backend.get_task()
+
+                if not msg:
+                    break
+
+                logger.info("Processing Task -  X:{} Y:{} Z:{} T:{}".format(msg["x_tile"],
+                                                                            msg["y_tile"],
+                                                                            msg["z_tile"],
+                                                                            msg["time_sample"]))
 
                 # Call path processor
                 filename = self.path_processor.process(msg["x_tile"],
@@ -171,26 +205,24 @@ class Engine(object):
                                                             msg["y_tile"],
                                                             msg["z_tile"],
                                                             msg["time_sample"])
-                cnt = 0
-                while cnt < 2:
-                    try:
-                        response = self.tile_bucket.put_object(ACL='private',
-                                                               Body=handle,
-                                                               Key=object_key,
-                                                               Metadata={
-                                                                   'message_id': message_id,
-                                                                   'receipt_handle': receipt_handle
-                                                               },
-                                                               StorageClass='STANDARD')
+                try:
+                    response = self.tile_bucket.put_object(ACL='private',
+                                                           Body=handle,
+                                                           Key=object_key,
+                                                           Metadata={
+                                                               'message_id': message_id,
+                                                               'receipt_handle': receipt_handle,
+                                                               "queue_url": self.backend.queue.url
+                                                           },
+                                                           StorageClass='STANDARD')
+                    logger.info("Successfully wrote file: {}".format(response.key))
 
-                        # TODO: Make sure upload worked by checking response
-                        break
-                    except Exception as e:
-                        print("Tile upload failed. Retrying.")
-                        if cnt < 2:
-                            cnt += 1
-                        else:
-                            raise IOError("Failed to upload tile: {}".format(e))
+                except Exception as e:
+                    logger.error("Upload Failed -  X:{} Y:{} Z:{} T:{} - {}".format(msg["x_tile"],
+                                                                                    msg["y_tile"],
+                                                                                    msg["z_tile"],
+                                                                                    msg["time_sample"],
+                                                                                    e))
 
             except KeyboardInterrupt:
                 # Make sure they want to stop this client
@@ -209,6 +241,8 @@ class Engine(object):
                 if quit_run:
                     print("Stopping upload engine.")
                     break
+
+        logger.info("No more tasks remaining.")
 
 
 
