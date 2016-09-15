@@ -73,7 +73,7 @@ class Validator(object):
         else:
             return {"info": ["Configuration file schema validation - Failed"],
                     "question": [],
-                    "error": [schema_err_msg]}
+                    "error": [schema_err_msg.message]}
 
     @abstractmethod
     def validate_properties(self):

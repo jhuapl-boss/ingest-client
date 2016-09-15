@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from ingest.core.engine import Engine
+from ingest.core.config import ConfigFileError
 from six.moves import input
 import argparse
 import sys
@@ -70,7 +71,11 @@ def main():
         sys.exit(1)
 
     # Create an engine instance
-    engine = Engine(args.config_file, args.api_token, args.job_id)
+    try:
+        engine = Engine(args.config_file, args.api_token, args.job_id)
+    except ConfigFileError as err:
+        print("ERROR: {}".format(err))
+        sys.exit(1)
 
     if args.cancel:
         # Trying to cancel

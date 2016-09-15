@@ -19,6 +19,8 @@ from six.moves import cPickle as pickle
 from ingest.core.validator import Validator
 from ingest.core.backend import Backend
 import importlib
+from pkg_resources import resource_filename
+import os
 
 
 @six.python_2_unicode_compatible
@@ -381,6 +383,11 @@ class BossConfigurationGenerator(ConfigurationGenerator):
         self.add_property_object(ingest_job)
 
 
+class ConfigFileError(Exception):
+    """Custom error to catch config file errors upstream in the client"""
+    pass
+
+
 class Configuration(object):
     def __init__(self, config_file=None):
         """
@@ -410,9 +417,28 @@ class Configuration(object):
             None
 
         """
-        with open(config_file, 'r') as file_handle:
-            self.config_data = json.load(file_handle)
+        try:
+            with open(config_file, 'r') as file_handle:
+                self.config_data = json.load(file_handle)
+        except ValueError as _:
+            # Bad json file
+            raise ConfigFileError("Malformed JSON in Ingest Configuration File.  Please double check contents and try again")
+        except IOError as _:
+            # File not found - python2/3 are different for missing files so us OSError
+            raise ConfigFileError("Ingest Configuration File not found.  Double check the provided path: {}".format(config_file))
+        except OSError as _:
+            # File not found - python2/3 are different for missing files so us OSError
+            raise ConfigFileError("Ingest Configuration File not found.  Double check the provided path: {}".format(config_file))
 
+        # Load the schema file based on the config that was provided
+        try:
+            schema_name = self.config_data['schema']['name']
+        except KeyError as err:
+            raise ConfigFileError("The specified schema was not found: {}. Try to update your ingest client library or double check your ingest job configuration file".format(self.config_data['schema']['name']))
+        with open(os.path.join(resource_filename("ingest", "schema"), "{}.json".format(schema_name)), 'rt') as schema_file:
+            self.schema = json.load(schema_file)
+
+        # Create plugin instances
         package, class_name = self.config_data["client"]["tile_processor"]["class"].rsplit('.', 1)
         tile_module = importlib.import_module(package)
         tile_class = getattr(tile_module, class_name)
@@ -477,8 +503,6 @@ class Configuration(object):
         # Setup the backend
         backend.setup(backend_api_token)
 
-        # Get the schema file now that you have a backend
-        self.schema = backend.get_schema()
         return backend
 
     def to_json(self):

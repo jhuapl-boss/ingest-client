@@ -35,9 +35,6 @@ class ResponsesMixin(object):
         responses._default_mock.__exit__()
 
     def add_default_response(self):
-        responses.add(responses.GET, 'https://api.theboss.io/v0.5/ingest/schema/boss/0.1/',
-                      json=self.mock_schema, status=200)
-
         mocked_repsonse = {"ingest_job_id": 23}
         responses.add(responses.POST, 'https://api.theboss.io/v0.5/ingest/job/',
                       json=mocked_repsonse, status=201)
@@ -66,15 +63,6 @@ class BossBackendTestMixin(object):
         b.setup(self.api_token)
 
         assert b.host == "https://api.theboss.io"
-
-    def test_get_schema(self):
-        """Method to test validating a bad schema"""
-        b = BossBackend(self.example_config_data)
-        b.setup(self.api_token)
-        schema = b.get_schema()
-
-        assert isinstance(schema, dict) is True
-        assert schema["type"] == "object"
 
     def test_setup_upload_queue(self):
         """Test connecting the backend to the upload queue"""
@@ -158,7 +146,7 @@ class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):
             s = json.load(file_handle)
             cls.mock_schema = {"schema": s}
 
-        with open(os.path.join(resource_filename("ingest", "schema"),
+        with open(os.path.join(resource_filename("ingest", "configs"),
                   "boss-v0.1-time-series-example.json"), 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 

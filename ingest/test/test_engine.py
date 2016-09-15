@@ -39,9 +39,6 @@ class ResponsesMixin(object):
         responses._default_mock.__exit__()
 
     def add_default_response(self):
-        responses.add(responses.GET, 'https://api.theboss.io/v0.5/ingest/schema/boss/0.1/',
-                      json=self.mock_schema, status=200)
-
         mocked_repsonse = {"ingest_job_id": 23}
         responses.add(responses.POST, 'https://api.theboss.io/v0.5/ingest/job/',
                       json=mocked_repsonse, status=201)

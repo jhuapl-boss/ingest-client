@@ -18,8 +18,9 @@ import unittest
 import json
 import tempfile
 import responses
+import six
 
-from ingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
+from ingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator, ConfigFileError
 from ingest.core.validator import BossValidatorV01
 from ingest.core.backend import BossBackend
 from ingest.plugins.path import TestPathProcessor
@@ -147,6 +148,20 @@ class ConfigurationTestMixin(object):
         assert isinstance(config.tile_processor_class, TestTileProcessor)
         assert isinstance(config.path_processor_class, TestPathProcessor)
 
+    def test_missing_file(self):
+        """Test creating a Configuration object"""
+        with self.assertRaises(ConfigFileError):
+            config = Configuration("/asdfhdfgkjldhsfg.json")
+
+    def test_bad_file(self):
+        """Test creating a Configuration object"""
+        with tempfile.NamedTemporaryFile(suffix='.json') as test_file:
+            with open(test_file.name, 'wt') as test_file_handle:
+                test_file_handle.write("garbage garbage garbage\n")
+
+            with self.assertRaises(ConfigFileError):
+                config = Configuration(test_file.name)
+
     def test_to_json(self):
         """Test json serialization"""
         config = Configuration(self.config_file)
@@ -168,9 +183,6 @@ class ConfigurationTestMixin(object):
     @responses.activate
     def test_get_backend(self):
         """Test dynamically getting the validator class"""
-        responses.add(responses.GET, 'https://api.theboss.io/v0.5/ingest/schema/boss/0.1/',
-                      json={"schema": self.schema}, status=200)
-
         config = Configuration(self.config_file)
 
         b = config.get_backend()

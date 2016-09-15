@@ -127,23 +127,6 @@ class Backend(object):
                                   aws_secret_access_key=credentials["secret"])
         self.queue = self.sqs.Queue(url=upload_queue)
 
-    @abstractmethod
-    def get_schema(self):
-        """
-        Method to get the schema for the configuration file.
-
-        This should typically be stored on the backend server to ensure correctness and consistency
-
-        Args:
-            None
-
-        Returns:
-            (dict): The parsed schema file in a dictionary
-
-
-        """
-        return NotImplemented
-
     # TODO: Possibly remove if ndingest lib is used as a dependency
     @abstractmethod
     def encode_object_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
@@ -297,31 +280,6 @@ class BossBackend(Backend):
             return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)
         else:
             return None, None, None
-
-    def get_schema(self):
-        """
-        Method to get the schema for the configuration file.
-
-        This should typically be stored on the backend server to ensure correctness and consistency
-
-        Args:
-            None
-
-        Returns:
-            (dict): The parsed schema file in a dictionary
-
-        """
-        # Get Schema
-        r = requests.get('{}/{}/ingest/schema/{}/{}/'.format(self.host, self.api_version,
-                                                             self.config['schema']['name'],
-                                                             self.config['schema']['version']),
-                         headers=self.api_headers)
-
-        if r.status_code != 200:
-            raise Exception("Failed to download schema. Name: {} Version: {}".format(self.config['schema']['name'],
-                                                                                     self.config['schema']['version']))
-        else:
-            return r.json()['schema']
 
     def encode_object_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
         """

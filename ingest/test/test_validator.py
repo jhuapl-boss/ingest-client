@@ -33,8 +33,7 @@ class BossValidatorV01TestMixin(object):
     def test_load(self):
         """Method to test creating an instance from the factory"""
         v = BossValidatorV01(self.example_config_data)
-        assert v.config["schema"]["version"] == "0.1"
-        assert v.config["schema"]["name"] == "boss"
+        assert v.config["schema"]["name"] == "boss-v0.1-schema"
 
     def test_validate_schema(self):
         """Method to tests validating a good schema"""
@@ -78,7 +77,7 @@ class TestBossValidatorV01(BossValidatorV01TestMixin, unittest.TestCase):
         with open(schema_file, 'r') as file_handle:
             cls.schema = json.load(file_handle)
 
-        with open(os.path.join(resource_filename("ingest", "schema"),
+        with open(os.path.join(resource_filename("ingest", "configs"),
                   "boss-v0.1-time-series-example.json"), 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
