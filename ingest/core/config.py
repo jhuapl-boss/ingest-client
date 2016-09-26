@@ -389,46 +389,34 @@ class ConfigFileError(Exception):
 
 
 class Configuration(object):
-    def __init__(self, config_file=None):
+    def __init__(self, config_data=None):
         """
         A class to store configuration information and parameters for an ingest job
 
         Args:
-            config_file(str): Absolute path to an ingest configuration file
+            config_data(dict): The configuration dictionary
         """
-        self.config_file = config_file
         self.config_data = None
         self.schema = None
         self.tile_processor_class = None
         self.path_processor_class = None
 
         # If a configuration file was provided, load it now
-        if config_file:
-            self.load(config_file)
+        if config_data:
+            self.load(config_data)
 
-    def load(self, config_file):
+    def load(self, config_data):
         """
         Method to load the configuration file, the configuration schema, and select the correct validator and backend
 
         Args:
-            config_file(str): Absolute path to an ingest configuration file
+            config_data(dict): The configuration dictionary
 
         Returns:
             None
 
         """
-        try:
-            with open(config_file, 'r') as file_handle:
-                self.config_data = json.load(file_handle)
-        except ValueError as _:
-            # Bad json file
-            raise ConfigFileError("Malformed JSON in Ingest Configuration File.  Please double check contents and try again")
-        except IOError as _:
-            # File not found - python2/3 are different for missing files so us OSError
-            raise ConfigFileError("Ingest Configuration File not found.  Double check the provided path: {}".format(config_file))
-        except OSError as _:
-            # File not found - python2/3 are different for missing files so us OSError
-            raise ConfigFileError("Ingest Configuration File not found.  Double check the provided path: {}".format(config_file))
+        self.config_data = config_data
 
         # Load the schema file based on the config that was provided
         try:

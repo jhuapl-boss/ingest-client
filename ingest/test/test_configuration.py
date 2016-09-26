@@ -20,7 +20,7 @@ import tempfile
 import responses
 import six
 
-from ingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator, ConfigFileError
+from ingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
 from ingest.core.validator import BossValidatorV01
 from ingest.core.backend import BossBackend
 from ingest.plugins.path import TestPathProcessor
@@ -142,29 +142,15 @@ class ConfigurationTestMixin(object):
 
     def test_create(self):
         """Test creating a Configuration object"""
-        config = Configuration(self.config_file)
+        config = Configuration(self.example_config_data)
 
         assert isinstance(config, Configuration)
         assert isinstance(config.tile_processor_class, TestTileProcessor)
         assert isinstance(config.path_processor_class, TestPathProcessor)
 
-    def test_missing_file(self):
-        """Test creating a Configuration object"""
-        with self.assertRaises(ConfigFileError):
-            config = Configuration("/asdfhdfgkjldhsfg.json")
-
-    def test_bad_file(self):
-        """Test creating a Configuration object"""
-        with tempfile.NamedTemporaryFile(suffix='.json') as test_file:
-            with open(test_file.name, 'wt') as test_file_handle:
-                test_file_handle.write("garbage garbage garbage\n")
-
-            with self.assertRaises(ConfigFileError):
-                config = Configuration(test_file.name)
-
     def test_to_json(self):
         """Test json serialization"""
-        config = Configuration(self.config_file)
+        config = Configuration(self.example_config_data)
 
         json_data = config.to_json()
 
@@ -174,7 +160,7 @@ class ConfigurationTestMixin(object):
 
     def test_get_validator(self):
         """Test dynamically getting the validator class"""
-        config = Configuration(self.config_file)
+        config = Configuration(self.example_config_data)
 
         v = config.get_validator()
 
@@ -183,7 +169,7 @@ class ConfigurationTestMixin(object):
     @responses.activate
     def test_get_backend(self):
         """Test dynamically getting the validator class"""
-        config = Configuration(self.config_file)
+        config = Configuration(self.example_config_data)
 
         b = config.get_backend()
         b.setup(self.api_token)

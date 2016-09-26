@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from ingest.core.engine import Engine
 from ingest.core.validator import Validator, BossValidatorV01
 from ingest.core.backend import Backend, BossBackend
-from ingest.core.config import Configuration
+from ingest.core.config import Configuration, ConfigFileError
 from ingest.test.aws import Setup
 
 import os
@@ -69,6 +69,20 @@ class EngineTestMixin(object):
         # Schema loaded
         assert isinstance(engine.config.schema, dict) is True
         assert engine.config.schema["type"] == "object"
+
+    def test_missing_file(self):
+        """Test creating a Configuration object"""
+        with self.assertRaises(ConfigFileError):
+            engine = Engine("/asdfhdfgkjldhsfg.json", self.api_token)
+
+    def test_bad_file(self):
+        """Test creating a Configuration object"""
+        with tempfile.NamedTemporaryFile(suffix='.json') as test_file:
+            with open(test_file.name, 'wt') as test_file_handle:
+                test_file_handle.write("garbage garbage garbage\n")
+
+            with self.assertRaises(ConfigFileError):
+                engine = Engine(test_file.name, self.api_token)
 
     def test_setup(self):
         """Test setting up the engine - no error should occur"""

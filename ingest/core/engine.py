@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from ingest.core.config import Configuration
+from ingest.core.config import Configuration, ConfigFileError
 import boto3
 from six.moves import input
 import logging
 import datetime
+import json
 
 
 class Engine(object):
@@ -56,8 +57,24 @@ class Engine(object):
         Returns:
             None
         """
+        try:
+            with open(config_file, 'r') as file_handle:
+                config_data = json.load(file_handle)
+        except ValueError as _:
+            # Bad json file
+            raise ConfigFileError(
+                "Malformed JSON in Ingest Configuration File.  Please double check contents and try again")
+        except IOError as _:
+            # File not found - python2/3 are different for missing files so us OSError
+            raise ConfigFileError(
+                "Ingest Configuration File not found.  Double check the provided path: {}".format(config_file))
+        except OSError as _:
+            # File not found - python2/3 are different for missing files so us OSError
+            raise ConfigFileError(
+                "Ingest Configuration File not found.  Double check the provided path: {}".format(config_file))
+
         # Load Config file and validate
-        self.config = Configuration(config_file)
+        self.config = Configuration(config_data)
 
         # Get backend
         self.backend = self.config.get_backend(self.backend_api_token)
