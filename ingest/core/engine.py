@@ -229,7 +229,8 @@ class Engine(object):
                                                            Metadata={
                                                                'message_id': message_id,
                                                                'receipt_handle': receipt_handle,
-                                                               "queue_url": self.backend.queue.url
+                                                               "tile_size_x": "{}".format(self.config.config_data["ingest_job"]["tile_size"]["x"]),
+                                                               "tile_size_y": "{}".format(self.config.config_data["ingest_job"]["tile_size"]["y"])
                                                            },
                                                            StorageClass='STANDARD')
                     logger.info("Successfully wrote file: {}".format(response.key))
