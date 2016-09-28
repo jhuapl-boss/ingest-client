@@ -443,7 +443,9 @@ class Configuration(object):
         Returns:
             (dict): Dictionary of params from the config file
         """
-        return self.config_data["client"]["tile_processor"]["params"]
+        params = self.config_data["client"]["tile_processor"]["params"]
+        params["ingest_job"] = self.config_data["ingest_job"]
+        return params
 
     def get_path_processor_params(self):
         """Method to get the path processor parameter dictionary
@@ -451,7 +453,9 @@ class Configuration(object):
         Returns:
             (dict): Dictionary of params from the config file
         """
-        return self.config_data["client"]["path_processor"]["params"]
+        params = self.config_data["client"]["path_processor"]["params"]
+        params["ingest_job"] = self.config_data["ingest_job"]
+        return params
 
     def get_validator(self):
         """

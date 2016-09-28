@@ -11,13 +11,17 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "ingest.plugins.multipage_tiff.TimeSeriesPathProcessor",
+      "class": "ingest.plugins.multipage_tiff.SingleTimeTiffPathProcessor",
       "params": {
+        "z_0": ""
       }
     },
     "tile_processor": {
-      "class": "ingest.plugins.multipage_tiff.TimeSeriesTileProcessor",
-      "params": {}
+      "class": "ingest.plugins.multipage_tiff.SingleTimeTiffTileProcessor",
+      "params": {
+        "datatype": "uint16",
+        "filetype": "tif"
+      }
     }
   },
   "database": {
@@ -29,22 +33,17 @@
       "create_properties": {
         "description": "",
         "default_time_step": 0,
-        "datatype": "uint8"
+        "datatype": "uint16"
       }
     }
   },
   "ingest_job": {
+    "resolution": 0,
     "extent": {
       "x": [0, 796],
       "y": [0, 512],
       "z": [0, 1],
       "t": [0, 1499]
-    },
-    "offset": {
-      "x": 0,
-      "y": 0,
-      "z": 0,
-      "t": 0
     },
     "tile_size": {
       "x": 796,

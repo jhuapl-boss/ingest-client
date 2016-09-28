@@ -31,32 +31,28 @@ def load_tiff_multipage(tiff_filename, dtype='uint16'):
         dtype:             data type to use for the returned tensor
 
     Returns:
-        Array containing contents from input tiff file in xyz order
+        Array containing contents from input tiff file in tyx order
     """
     if not os.path.isfile(tiff_filename):
-        raise RuntimeError('could not find file "%s"' % tiff_filename)
+        raise IOError('File not found: {}'.format(tiff_filename))
 
     # load the data from multi-layer TIF files
     data = Image.open(tiff_filename)
 
     im = []
-
     while True:
-
-        Xi = np.array(data, dtype=dtype)
-        if Xi.ndim == 2:
-            Xi = Xi[np.newaxis, ...]  # add slice dimension
-        im.append(Xi)
+        # Get all slices from file
+        img_slice = np.array(data, dtype=dtype)
+        if img_slice.ndim == 2:
+            img_slice = img_slice[np.newaxis, ...]
+        im.append(img_slice)
 
         try:
             data.seek(data.tell()+1)
         except EOFError:
-            break  # this just means hit end of file (not really an error)
+            break  # end of file
 
-    im = np.concatenate(im, axis=0)  # list of 2d -> tensor
-    im = np.rollaxis(im, 1)
-    im = np.rollaxis(im, 2)
-
+    im = np.concatenate(im, axis=0)
     return im
 
 
@@ -64,7 +60,7 @@ class SingleTimeTiffPathProcessor(PathProcessor):
     def setup(self, parameters):
         """Set the params - for this just store where the file is located
 
-        MUST HAVE THE CUSTOM PARAMETERS "z_{index}": "{filename}"
+        MUST HAVE THE CUSTOM PARAMETERS: "z_<index>": "<filename>"
 
         Args:
             parameters (dict): Parameters for the dataset to be processed
@@ -76,7 +72,7 @@ class SingleTimeTiffPathProcessor(PathProcessor):
 
     def process(self, x_index, y_index, z_index, t_index=None):
         """
-        Method to compute the file path for the indicated tile - For this, it's always the same file
+        Method to compute the file path for the indicated tile - For this, it's always the same file for each Z slice
 
         Args:
             x_index(int): The tile index in the X dimension
@@ -88,19 +84,32 @@ class SingleTimeTiffPathProcessor(PathProcessor):
             (str): An absolute file path that contains the specified data
 
         """
+        if t_index < self.parameters["ingest_job"]["extent"]["t"][0] or t_index >= self.parameters["ingest_job"]["extent"]["t"][1]:
+            raise IndexError("Invalid Tile T-Index: {}".format(t_index))
+
+        if z_index < self.parameters["ingest_job"]["extent"]["z"][0] or z_index >= self.parameters["ingest_job"]["extent"]["z"][1]:
+            raise IndexError("Invalid Tile Z-Index: {}".format(z_index))
+
+        if x_index > self.parameters["ingest_job"]["extent"]["x"][1] / self.parameters["ingest_job"]["tile_size"]["x"] - 1:
+            raise IndexError("Invalid Tile X-Index: {}".format(x_index))
+
+        if y_index > self.parameters["ingest_job"]["extent"]["y"][1] / self.parameters["ingest_job"]["tile_size"]["y"] - 1:
+            raise IndexError("Invalid Tile Y-Index: {}".format(y_index))
+
         return self.parameters['z_{}'.format(z_index)]
 
 
 class SingleTimeTiffTileProcessor(TileProcessor):
+    """A Tile processor for a file where a multi-page TIFF contains all time points for a single z-slice"""
     def __init__(self):
         """Constructor to add custom class var"""
         TileProcessor.__init__(self)
         self.data = None
 
     def setup(self, parameters):
-        """ Method to load the file for uploading - a very naive approach!
+        """ Method to load the file for uploading - a very naive approach
 
-        MUST HAVE THE CUSTOM PARAMETER "filename" indicating the file to upload
+        MUST HAVE THE CUSTOM PARAMETER: "datatype": "<uint8|uint16>"
 
         Args:
             parameters (dict): Parameters for the dataset to be processed
@@ -108,7 +117,8 @@ class SingleTimeTiffTileProcessor(TileProcessor):
         Returns:
             None
         """
-        pass
+        self.parameters = parameters
+        self.data = {}
 
     def process(self, file_path, x_index, y_index, z_index, t_index=0):
         """
@@ -126,17 +136,24 @@ class SingleTimeTiffTileProcessor(TileProcessor):
 
         """
         # Load the file into memory
-        if not self.data["z_{}".format(z_index)]:
-            data = load_tiff_multipage(file_path)
-            data = np.rollaxis(data, 1)
-            data = np.rollaxis(data, 2)
-            self.data["z_{}".format(z_index)] = np.expand_dims(data, axis=1)
+        if "z_{}".format(z_index) not in self.data:
+            # storing slices in tyx
+            self.data["z_{}".format(z_index)] = load_tiff_multipage(file_path, dtype=self.parameters["datatype"])
+
+        im = self.data["z_{}".format(z_index)][t_index, :, :]
+
+        # Compute matrix indices
+        x_start = self.parameters["ingest_job"]["tile_size"]["x"] * x_index
+        x_stop = self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)
+        y_start = self.parameters["ingest_job"]["tile_size"]["y"] * y_index
+        y_stop = self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)
 
         # TODO: Verify handles will be closed properly and memory reclaimed
         # Save img to png and return handle
-        tile_data = Image.fromarray(self.data["z_{}".format(z_index)][t_index, :, :, :])
-        output = six.StringIO.StringIO()
-        tile_data.save(output, format="PNG")
+        tile_data = Image.fromarray(im[y_start:y_stop, x_start:x_stop], 'I;16')
+
+        output = six.BytesIO()
+        tile_data.save(output, format="TIFF")
 
         # Send handle back
         return output

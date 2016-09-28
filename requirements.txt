@@ -4,3 +4,5 @@ requests==2.11.1
 responses==0.5.1
 boto3==1.4.0
 moto==0.4.25
+Pillow
+numpy

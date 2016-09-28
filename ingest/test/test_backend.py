@@ -116,25 +116,130 @@ class BossBackendTestMixin(object):
 
         assert msg_body == self.setup_helper.test_msg
 
-    def test_encode_object_key(self):
+    def test_encode_tile_key(self):
         """Test encoding an object key"""
         b = BossBackend(self.example_config_data)
         b.setup(self.api_token)
 
-        b.join(23)
+        params = {"collection": 1,
+                  "experiment": 2,
+                  "channel": 3,
+                  "resolution": 0,
+                  "x_index": 5,
+                  "y_index": 6,
+                  "z_index": 1,
+                  "t_index": 0,
+                  }
 
-        msg_id, rx_handle, msg_body = b.get_task()
-
-        proj = [str(msg_body['collection']), str(msg_body['experiment']), str(msg_body['channel'])]
-        key = b.encode_object_key(proj,
-                                  msg_body['resolution'],
-                                  msg_body['x_tile'],
-                                  msg_body['y_tile'],
-                                  msg_body['z_tile'],
-                                  msg_body['time_sample'],
-                                  )
+        proj = [str(params['collection']), str(params['experiment']), str(params['channel'])]
+        key = b.encode_tile_key(proj,
+                                params['resolution'],
+                                params['x_index'],
+                                params['y_index'],
+                                params['z_index'],
+                                params['t_index'],
+                                )
 
         assert key == six.u("03ca58a12ec662954ac12e06517d4269&1&2&3&0&5&6&1&0")
+
+    def test_encode_chunk_key(self):
+        """Test encoding an object key"""
+        b = BossBackend(self.example_config_data)
+        b.setup(self.api_token)
+
+        params = {"collection": 1,
+                  "experiment": 2,
+                  "channel": 3,
+                  "resolution": 0,
+                  "x_index": 5,
+                  "y_index": 6,
+                  "z_index": 1,
+                  "t_index": 0,
+                  "num_tiles": 16,
+                  }
+
+        proj = [str(params['collection']), str(params['experiment']), str(params['channel'])]
+        key = b.encode_chunk_key(params['num_tiles'], proj,
+                                 params['resolution'],
+                                 params['x_index'],
+                                 params['y_index'],
+                                 params['z_index'],
+                                 params['t_index'],
+                                 )
+
+        assert key == six.u("77ff984241a0d6aa443d8724a816866d&16&1&2&3&0&5&6&1&0")
+
+    def test_decode_tile_key(self):
+        """Test encoding an object key"""
+        b = BossBackend(self.example_config_data)
+        b.setup(self.api_token)
+
+        params = {"collection": 1,
+                  "experiment": 2,
+                  "channel": 3,
+                  "resolution": 0,
+                  "x_index": 5,
+                  "y_index": 6,
+                  "z_index": 1,
+                  "t_index": 0,
+                  }
+
+        proj = [str(params['collection']), str(params['experiment']), str(params['channel'])]
+        key = b.encode_tile_key(proj,
+                                params['resolution'],
+                                params['x_index'],
+                                params['y_index'],
+                                params['z_index'],
+                                params['t_index'],
+                                )
+
+        parts = b.decode_tile_key(key)
+
+        assert parts["collection"] == params['collection']
+        assert parts["experiment"] == params['experiment']
+        assert parts["channel_layer"] == params['channel']
+        assert parts["resolution"] == params['resolution']
+        assert parts["x_index"] == params['x_index']
+        assert parts["y_index"] == params['y_index']
+        assert parts["z_index"] == params['z_index']
+        assert parts["t_index"] == params['t_index']
+
+    def test_decode_chunk_key(self):
+        """Test encoding an object key"""
+        b = BossBackend(self.example_config_data)
+        b.setup(self.api_token)
+
+        params = {"collection": 1,
+                  "experiment": 2,
+                  "channel": 3,
+                  "resolution": 0,
+                  "x_index": 5,
+                  "y_index": 6,
+                  "z_index": 1,
+                  "t_index": 0,
+                  "num_tiles": 0,
+                  }
+
+        proj = [str(params['collection']), str(params['experiment']), str(params['channel'])]
+        key = b.encode_chunk_key(params['num_tiles'], proj,
+                                 params['resolution'],
+                                 params['x_index'],
+                                 params['y_index'],
+                                 params['z_index'],
+                                 params['t_index'],
+                                 )
+
+        parts = b.decode_chunk_key(key)
+
+        assert parts["collection"] == params['collection']
+        assert parts["experiment"] == params['experiment']
+        assert parts["channel_layer"] == params['channel']
+        assert parts["resolution"] == params['resolution']
+        assert parts["x_index"] == params['x_index']
+        assert parts["y_index"] == params['y_index']
+        assert parts["z_index"] == params['z_index']
+        assert parts["t_index"] == params['t_index']
+        assert parts["num_tiles"] == params['num_tiles']
 
 
 class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):

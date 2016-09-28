@@ -127,10 +127,11 @@ class Backend(object):
                                   aws_secret_access_key=credentials["secret"])
         self.queue = self.sqs.Queue(url=upload_queue)
 
-    # TODO: Possibly remove if ndingest lib is used as a dependency
     @abstractmethod
-    def encode_object_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
-        """
+    def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
+        """A method to create a tile key.
+
+        The tile key is the key used for each individual tile file.
 
         Args:
             project_info(list): A list of strings containing the project/data model information for where data belongs
@@ -142,6 +143,55 @@ class Backend(object):
 
         Returns:
             (str): The object key to use for uploading to the tile bucket
+        """
+        return NotImplemented
+
+    @abstractmethod
+    def encode_chunk_key(self, num_tiles, project_info, resolution, x_index, y_index, z_index, t_index=0):
+        """A method to create a chunk key.
+
+        A "chunk" is the group of tiles that must be uploaded so a cuboid can be ingested.  The chunk key is used
+        to track all tiles in a given group.
+
+        Args:
+            num_tiles(int): The expected number of tiles in this chunk (in the z-dimension). Useful for forcing ingest of partial cuboids
+            project_info(list): A list of strings containing the project/data model information for where data belongs
+            resolution(int): The level of the resolution hierarchy.  Typically 0
+            x_index(int): The x tile index
+            y_index(int): The y tile index
+            z_index(int): The z tile index
+            t_index(int): The time index
+
+        Returns:
+            (str): The object key to use for uploading to the tile bucket
+        """
+        return NotImplemented
+
+    @abstractmethod
+    def decode_tile_key(self, key):
+        """A method to decode the tile key
+
+        The tile key is the key used for each individual tile file.
+
+        Args:
+            key(str): The key to decode
+
+        Returns:
+            (dict): A dictionary containing the components of the key
+        """
+        return NotImplemented
+
+    @abstractmethod
+    def decode_chunk_key(self, key):
+        """A method to decode the chunk key
+
+        The tile key is the key used for each individual tile file.
+
+        Args:
+            key(str): The key to decode
+
+        Returns:
+            (dict): A dictionary containing the components of the key
         """
         return NotImplemented
 
@@ -281,8 +331,10 @@ class BossBackend(Backend):
         else:
             return None, None, None
 
-    def encode_object_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
-        """
+    def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
+        """A method to create a tile key.
+
+        The tile key is the key used for each individual tile file.
 
         Args:
             project_info(list): A list of strings containing the project/data model information for where data belongs
@@ -302,3 +354,79 @@ class BossBackend(Backend):
         hashm.update(base_key.encode())
 
         return six.u("{}&{}".format(hashm.hexdigest(), base_key))
+
+    def encode_chunk_key(self, num_tiles, project_info, resolution, x_index, y_index, z_index, t_index=0):
+        """A method to create a chunk key.
+
+        A "chunk" is the group of tiles that must be uploaded so a cuboid can be ingested.  The chunk key is used
+        to track all tiles in a given group.
+
+        Args:
+            num_tiles(int): The expected number of tiles in this chunk (in the z-dimension). Useful for forcing ingest of partial cuboids
+            project_info(list): A list of strings containing the project/data model information for where data belongs
+            resolution(int): The level of the resolution hierarchy.  Typically 0
+            x_index(int): The x tile index
+            y_index(int): The y tile index
+            z_index(int): The z tile index
+            t_index(int): The time index
+
+        Returns:
+            (str): The object key to use for uploading to the tile bucket
+        """
+        proj_str = six.u("&".join([str(x) for x in project_info]))
+        base_key = six.u("{}&{}&{}&{}&{}&{}&{}".format(num_tiles, proj_str,
+                                                       resolution, x_index, y_index, z_index, t_index))
+
+        hashm = hashlib.md5()
+        hashm.update(base_key.encode())
+
+        return six.u("{}&{}".format(hashm.hexdigest(), base_key))
+
+    def decode_tile_key(self, key):
+        """A method to decode the tile key
+
+        The tile key is the key used for each individual tile file.
+
+        Args:
+            key(str): The key to decode
+
+        Returns:
+            (dict): A dictionary containing the components of the key
+        """
+        result = {}
+        parts = key.split('&')
+        result["collection"] = int(parts[1])
+        result["experiment"] = int(parts[2])
+        result["channel_layer"] = int(parts[3])
+        result["resolution"] = int(parts[4])
+        result["x_index"] = int(parts[5])
+        result["y_index"] = int(parts[6])
+        result["z_index"] = int(parts[7])
+        result["t_index"] = int(parts[8])
+
+        return result
+
+    def decode_chunk_key(self, key):
+        """A method to decode the chunk key
+
+        The tile key is the key used for each individual tile file.
+
+        Args:
+            key(str): The key to decode
+
+        Returns:
+            (dict): A dictionary containing the components of the key
+        """
+        result = {}
+        parts = key.split('&')
+        result["num_tiles"] = int(parts[1])
+        result["collection"] = int(parts[2])
+        result["experiment"] = int(parts[3])
+        result["channel_layer"] = int(parts[4])
+        result["resolution"] = int(parts[5])
+        result["x_index"] = int(parts[6])
+        result["y_index"] = int(parts[7])
+        result["z_index"] = int(parts[8])
+        result["t_index"] = int(parts[9])
+
+        return result

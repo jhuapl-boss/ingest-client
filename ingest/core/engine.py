@@ -216,12 +216,12 @@ class Engine(object):
 
                 # Upload tile
                 project_info = [msg["collection"], msg["experiment"], msg["channel"]]
-                object_key = self.backend.encode_object_key(project_info,
-                                                            msg["resolution"],
-                                                            msg["x_tile"],
-                                                            msg["y_tile"],
-                                                            msg["z_tile"],
-                                                            msg["time_sample"])
+                object_key = self.backend.encode_tile_key(project_info,
+                                                          msg["resolution"],
+                                                          msg["x_tile"],
+                                                          msg["y_tile"],
+                                                          msg["z_tile"],
+                                                          msg["time_sample"])
                 try:
                     response = self.tile_bucket.put_object(ACL='private',
                                                            Body=handle,

@@ -136,6 +136,9 @@
     "ingest_job": {
       "type": "object",
       "properties": {
+        "resolution": {
+          "type": "integer"
+        },
         "extent": {
           "type": "object",
           "properties": {
@@ -171,29 +174,6 @@
             "t"
           ]
         },
-        "offset": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "integer"
-            },
-            "y": {
-              "type": "integer"
-            },
-            "z": {
-              "type": "integer"
-            },
-            "t": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "x",
-            "y",
-            "z",
-            "t"
-          ]
-        },
         "tile_size": {
           "type": "object",
           "properties": {
@@ -219,8 +199,8 @@
         }
       },
       "required": [
+        "resolution",
         "extent",
-        "offset",
         "tile_size"
       ]
     }
