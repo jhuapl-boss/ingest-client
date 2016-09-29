@@ -235,8 +235,7 @@ class ConfigurationGenerator(object):
 
 
 class BossConfigurationGenerator(ConfigurationGenerator):
-    def __init__(self, create_channel=False):
-        self.create_channel = create_channel
+    def __init__(self):
         ConfigurationGenerator.__init__(self)
 
         self.name = "Boss Ingest v0.1"
@@ -292,44 +291,13 @@ class BossConfigurationGenerator(ConfigurationGenerator):
                                       "Ingest client properties"
                                       )
 
-        # Database Section
-        if self.create_channel:
-            channel_create_props = ConfigPropertyObject("create_properties",
-                                                        {"description": "",
-                                                         "default_time_step": 0,
-                                                         "datatype": "uint8"},
-                                                        {"description": "A description of what the channel stores",
-                                                         "default_time_step": "The time step value to use if omitted from API requests.  For non-time series data this should always be 0.",
-                                                         "datatype": "The datatype (bit-depth) of the channel.  Supported values: uint8, uint16"},
-                                                        "Properties used to create a new channel."
-                                                        )
-        else:
-            channel_create_props = ConfigPropertyObject("create_properties",
-                                                        {"description": None,
-                                                         "default_time_step": None,
-                                                         "datatype": None},
-                                                        {"description": "A description of what the channel stores",
-                                                         "default_time_step": "The time step value to use if omitted from API requests.  For non-time series data this should always be 0.",
-                                                         "datatype": "The datatype (bit-depth) of the channel.  Supported values: uint8, uint16"},
-                                                        "Properties used to create a new channel."
-                                                        )
-        database_channel = ConfigPropertyObject("channel",
-                                                {"name": "",
-                                                 "create": self.create_channel,
-                                                 "create_properties": channel_create_props},
-                                                {"name": "collection name",
-                                                 "create": "boolean indicating if a NEW channel should be created",
-                                                 "create_properties": "Properties for creating a new channel"},
-                                                "Properties for the channel in which data will be stored"
-                                                )
-
         database = ConfigPropertyObject("database",
                                         {"collection": "",
                                          "experiment": "",
-                                         "channel": database_channel},
+                                         "channel": ""},
                                         {"collection": "The collection name containing the experiment and channel where data will be written",
                                          "experiment": "The experiment name containing the channel where data will be written",
-                                         "channel": "Properties of the channel where data will be written"},
+                                         "channel": "The channel name where data will be written"},
                                         "Properties describing where in the database data should be written"
                                         )
 
@@ -345,17 +313,6 @@ class BossConfigurationGenerator(ConfigurationGenerator):
                                                   "t": "The spatial extent (in pixels) in the t-dimension. Python convention - start inclusive, stop exclusive"},
                                                  "The spatial extent of the data to be uploaded.  This does not have to be the entire dataset."
                                                  )
-        ingest_job_offset = ConfigPropertyObject("offset",
-                                                 {"x": 0,
-                                                  "y": 0,
-                                                  "z": 0,
-                                                  "t": 0},
-                                                 {"x": "The spatial offset (in pixels) in the x-dimension where the ingest job begins",
-                                                  "y": "The spatial offset (in pixels) in the y-dimension where the ingest job begins",
-                                                  "z": "The spatial offset (in pixels) in the z-dimension where the ingest job begins",
-                                                  "t": "The spatial offset (in pixels) in the t-dimension where the ingest job begins",},
-                                                 "The spatial offset of the data to be uploaded in relation to the total dataset stored or to be stored in the channel"
-                                                 )
         ingest_job_tile_size = ConfigPropertyObject("tile_size",
                                                  {"x": 4096,
                                                   "y": 4096,
@@ -368,11 +325,11 @@ class BossConfigurationGenerator(ConfigurationGenerator):
                                                  "The dimensions of the individual image data files that will be uploaded to the Boss"
                                                  )
         ingest_job = ConfigPropertyObject("ingest_job",
-                                          {"extent": ingest_job_extent,
-                                           "offset": ingest_job_offset,
+                                          {"resolution": 0,
+                                           "extent": ingest_job_extent,
                                            "tile_size": ingest_job_tile_size},
                                           {"extent": "The spatial extent of the data to be uploaded.  This does not have to be the entire dataset.",
-                                           "offset": "The spatial offset of the data to be uploaded in relation to the total dataset stored or to be stored in the channel",
+                                           "resolution": "The resolution level to ingest data. Default is 0 which represents native resolution",
                                            "tile_size": "The dimensions of the individual image data files that will be uploaded to the Boss"},
                                           "The properties defining what part of the dataset will be ingested"
                                           )

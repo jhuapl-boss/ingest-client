@@ -91,46 +91,14 @@
         "experiment": {
           "type": "string"
         },
-        "channel": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "create": {
-              "type": "boolean"
-            },
-            "create_properties": {
-              "type": "object",
-              "properties": {
-                "description": {
-                  "type": "string"
-                },
-                "default_time_step": {
-                  "type": "integer"
-                },
-                "datatype": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "description",
-                "default_time_step",
-                "datatype"
-              ]
-            }
-          },
-          "required": [
-            "name",
-            "create",
-            "create_properties"
-          ]
+        "channel_layer": {
+          "type": "string"
         }
       },
       "required": [
         "collection",
         "experiment",
-        "channel"
+        "channel_layer"
       ]
     },
     "ingest_job": {

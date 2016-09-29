@@ -22,15 +22,7 @@
   },
   "database": {
     "collection": "my_col_1",
-    "channel": {
-      "name": "my_ch_1",
-      "create": false,
-      "create_properties": {
-        "description": "",
-        "default_time_step": 0,
-        "datatype": "uint8"
-      }
-    }
+    "experiment": "my_exp_1"
   },
   "ingest_job": {
     "resolution": 0,
