@@ -118,29 +118,49 @@ class Setup(object):
             self._delete_queue(queue_name)
     # ***** END Flush SQS Queue *****
 
-    def _add_tasks(self, id, secret, queue_url):
+    def _add_tasks(self, id, secret, queue_url, backend_instance):
         """Push some fake tasks on the task queue"""
         client = boto3.client('sqs', region_name=self.region, aws_access_key_id=id,
                               aws_secret_access_key=secret)
 
-        self.test_msg = {'collection': 1,
-                         'experiment': 2,
-                         'channel': 3,
-                         'resolution': 0,
-                         'x_tile': 5,
-                         'y_tile': 6,
-                         'z_tile': 1,
-                         'time_sample': 0
-                         }
+        params = {"collection": 1,
+                  "experiment": 2,
+                  "channel": 3,
+                  "resolution": 0,
+                  "x_index": 5,
+                  "y_index": 6,
+                  "z_index": 1,
+                  "t_index": 0,
+                  "num_tiles": 16,
+                  }
 
-        client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(self.test_msg))
-        client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(self.test_msg))
-        client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(self.test_msg))
-        client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(self.test_msg))
+        self.test_msg = []
+        for t_idx in range(0, 4):
+            params["t_index"] = t_idx
+            proj = [str(params['collection']), str(params['experiment']), str(params['channel'])]
+            tile_key = backend_instance.encode_tile_key(proj,
+                                                        params['resolution'],
+                                                        params['x_index'],
+                                                        params['y_index'],
+                                                        params['z_index'],
+                                                        params['t_index'],
+                                                        )
 
-    def add_tasks(self, id, secret, queue_url):
+            chunk_key = backend_instance.encode_chunk_key(params['num_tiles'], proj,
+                                                          params['resolution'],
+                                                          params['x_index'],
+                                                          params['y_index'],
+                                                          params['z_index'],
+                                                          params['t_index'],
+                                                          )
+
+            msg = {"tile_key": tile_key, "chunk_key": chunk_key}
+            client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(msg))
+            self.test_msg.append(msg)
+
+    def add_tasks(self, id, secret, queue_url, backend_instance):
         """Push some fake tasks on the task queue"""
         if self.mock:
-            mock_sqs(self._add_tasks(id, secret, queue_url))
+            mock_sqs(self._add_tasks(id, secret, queue_url, backend_instance))
         else:
-            self._add_tasks(id, secret, queue_url)
+            self._add_tasks(id, secret, queue_url, backend_instance)

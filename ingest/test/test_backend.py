@@ -35,18 +35,25 @@ class ResponsesMixin(object):
         responses._default_mock.__exit__()
 
     def add_default_response(self):
-        mocked_repsonse = {"ingest_job_id": 23}
-        responses.add(responses.POST, 'https://api.theboss.io/v0.5/ingest/job/',
+        mocked_repsonse = {"ingest_job": {"id": 23}}
+        responses.add(responses.POST, 'https://api.theboss.io/v0.6/ingest/',
                       json=mocked_repsonse, status=201)
 
-        mocked_repsonse = {"ingest_job_status": 1,
-                           "credentials": {"id":"asdfasdf", "secret": "asdfasdfasdfasdf"},
-                           "upload_queue": self.queue_url,
-                           "tile_bucket": "test-tile-store"}
-        responses.add(responses.GET, 'https://api.theboss.io/v0.5/ingest/job/23',
+        mocked_repsonse = {"ingest_job": {"id": 23,
+                                          "ingest_queue": "https://aws.com/myqueue1",
+                                          "upload_queue": self.queue_url,
+                                          "tile_bucket": self.tile_bucket_name,
+                                          "status": 1
+                                          },
+                           "KVIO_SETTINGS": {"settings": "go here"},
+                           "STATEIO_CONFIG": {"settings": "go here"},
+                           "OBJECTIO_CONFIG": {"settings": "go here"},
+                           "credentials": self.aws_creds
+                           }
+        responses.add(responses.GET, 'https://api.theboss.io/v0.6/ingest/23',
                       json=mocked_repsonse, status=200)
 
-        responses.add(responses.DELETE, 'https://api.theboss.io/v0.5/ingest/job/23', status=200)
+        responses.add(responses.DELETE, 'https://api.theboss.io/v0.6/ingest/23', status=200)
 
 
 class BossBackendTestMixin(object):
@@ -87,13 +94,17 @@ class BossBackendTestMixin(object):
         b = BossBackend(self.example_config_data)
         b.setup(self.api_token)
 
-        status, creds, queue_url, tile_bucket = b.join(23)
+        status, creds, queue_url, tile_bucket, params = b.join(23)
 
         assert b.queue.url == self.queue_url
         assert status == 1
-        assert isinstance(creds, dict)
+        assert creds == self.aws_creds
         assert queue_url == self.queue_url
         assert tile_bucket == self.tile_bucket_name
+        assert 'KVIO_SETTINGS' in params
+        assert 'OBJECTIO_CONFIG' in params
+        assert 'STATEIO_CONFIG' in params
+        assert 'ingest_queue' in params
 
     def test_delete(self):
         """Test deleting an existing ingest job - mock server response"""
@@ -107,14 +118,21 @@ class BossBackendTestMixin(object):
         b = BossBackend(self.example_config_data)
         b.setup(self.api_token)
 
-        b.join(23)
+        # Put some stuff on the task queue
+        self.setup_helper.add_tasks(self.aws_creds["id"], self.aws_creds['secret'], self.queue_url, b)
 
+        # Join and get a task
+        b.join(23)
         msg_id, rx_handle, msg_body = b.get_task()
 
         assert isinstance(msg_id, str)
         assert isinstance(rx_handle, str)
+        assert msg_body == self.setup_helper.test_msg[0]
 
-        assert msg_body == self.setup_helper.test_msg
+        msg_id, rx_handle, msg_body = b.get_task()
+        assert isinstance(msg_id, str)
+        assert isinstance(rx_handle, str)
+        assert msg_body == self.setup_helper.test_msg[1]
 
     def test_encode_tile_key(self):
         """Test encoding an object key"""
@@ -269,10 +287,7 @@ class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):
         cls.api_token = "aalasdklbajklsbfasdklbfkjdsb"
 
         # mock aws creds
-        cls.aws_creds = {"id": "asdfasdf", "secret": "asdfasdfasdfadsf"}
-
-        # Put some stuff on the task queue
-        cls.setup_helper.add_tasks(cls.aws_creds["id"], cls.aws_creds['secret'], cls.queue_url)
+        cls.aws_creds = {"id": "1234", "secret": "asdfasdfasdfadsf"}
 
     @classmethod
     def tearDownClass(cls):

@@ -75,7 +75,8 @@ class Backend(object):
             ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int, dict, str): The job status, AWS credentials, and SQS upload_job_queue for the provided ingest job id
+            (int, dict, str, dict): The job status, AWS credentials, and SQS upload_job_queue, config_params to pass
+                                    along during upload via metadata
 
 
         """
@@ -224,7 +225,7 @@ class BossBackend(Backend):
         self.host = None
         self.api_headers = None
         Backend.__init__(self, config)
-        self.api_version = "v0.5"
+        self.api_version = "v0.6"
 
     def setup(self, api_token=None):
         """
@@ -263,39 +264,58 @@ class BossBackend(Backend):
 
 
         """
-        r = requests.post('{}/{}/ingest/job/'.format(self.host, self.api_version), json=config_dict,
+        r = requests.post('{}/{}/ingest/'.format(self.host, self.api_version), json=config_dict,
                           headers=self.api_headers)
 
         if r.status_code != 201:
             return "Failed to create ingest job. Verify configuration file."
         else:
-            return r.json()['ingest_job_id']
+            return r.json()['ingest_job']['id']
 
     def join(self, ingest_job_id):
         """
         Method to join an ingest job upload
 
-        Job Status: {0: Preparing, 1: Uploading, 2: Complete}
+        Job Status: {0: Preparing, 1: Uploading, 2: Complete, 3: Deleted}
 
         Args:
             ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int, dict, str, str): The job status, AWS credentials,
-                                    and SQS upload_job_queue for the provided ingest job id, and the tile bucket name
+            (int, dict, str, str, dict): The job status, AWS credentials, and SQS upload_job_queue, tile bucket name
+                                         config_params to pass along during upload via metadata
 
 
         """
-        r = requests.get('{}/{}/ingest/job/{}'.format(self.host, self.api_version, ingest_job_id),
-                          headers=self.api_headers)
+        r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
+                         headers=self.api_headers)
 
         if r.status_code != 200:
             raise Exception("Failed to join ingest job.")
         else:
             result = r.json()
-            if result['ingest_job_status'] < 2:
-                self.setup_upload_queue(result['credentials'], result['upload_queue'], region="us-east-1")
-            return result['ingest_job_status'], result['credentials'], result['upload_queue'], result['tile_bucket']
+            status = result['ingest_job']["status"]
+            creds = {}
+            queue = ""
+            params = {}
+            tile_bucket = ""
+
+            if result['ingest_job']["status"] == 1:
+                # Good to join
+                creds = result["credentials"]
+                queue = result["ingest_job"]["upload_queue"]
+                tile_bucket = result["ingest_job"]["tile_bucket"]
+
+                # Setup params for the rest of the ingest process
+                params["upload_queue"] = result["ingest_job"]["upload_queue"]
+                params["ingest_queue"] = result["ingest_job"]["ingest_queue"]
+                params["KVIO_SETTINGS"] = result["KVIO_SETTINGS"]
+                params["STATEIO_CONFIG"] = result["STATEIO_CONFIG"]
+                params["OBJECTIO_CONFIG"] = result["OBJECTIO_CONFIG"]
+
+                self.setup_upload_queue(creds, queue, region="us-east-1")
+
+            return status, creds, queue, tile_bucket, params
 
     def cancel(self, ingest_job_id):
         """
@@ -309,7 +329,7 @@ class BossBackend(Backend):
 
 
         """
-        r = requests.delete('{}/{}/ingest/job/{}'.format(self.host, self.api_version, ingest_job_id),
+        r = requests.delete('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
                             headers=self.api_headers)
 
         if r.status_code != 200:
@@ -324,7 +344,6 @@ class BossBackend(Backend):
         Returns:
             (str, str, dict): message_id, receipt_handle, message contents
         """
-        # TODO: Possibly remove if ndingest lib is used as a dependency
         msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=5)
         if msg:
             return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)

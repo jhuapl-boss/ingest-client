@@ -42,8 +42,8 @@ class Engine(object):
         self.ingest_job_id = ingest_job_id
         self.upload_job_queue = None
         self.job_status = 0
-
         self.tile_bucket = None
+        self.job_params = None
 
         if config_file:
             self.load_configuration(config_file)
@@ -143,7 +143,7 @@ class Engine(object):
 
 
         """
-        self.job_status, self.credentials, self.upload_job_queue, tile_bucket = self.backend.join(self.ingest_job_id)
+        self.job_status, self.credentials, self.upload_job_queue, tile_bucket, self.job_params = self.backend.join(self.ingest_job_id)
 
         # Setup bucket
         # TODO: Possibly replace if ndingest lib is used as a dependency
@@ -197,40 +197,37 @@ class Engine(object):
                 if not msg:
                     break
 
-                logger.info("Processing Task -  X:{} Y:{} Z:{} T:{}".format(msg["x_tile"],
-                                                                            msg["y_tile"],
-                                                                            msg["z_tile"],
-                                                                            msg["time_sample"]))
+                # TODO: DMK Verify and update once message format is finalized
+                key_parts = self.backend.decode_tile_key(msg['tile_key'])
+                logger.info("Processing Task -  X:{} Y:{} Z:{} T:{}".format(key_parts["x_index"],
+                                                                            key_parts["y_index"],
+                                                                            key_parts["z_index"],
+                                                                            key_parts["t_index"]))
 
                 # Call path processor
-                filename = self.path_processor.process(msg["x_tile"],
-                                                       msg["y_tile"],
-                                                       msg["z_tile"],
-                                                       msg["time_sample"])
+                filename = self.path_processor.process(key_parts["x_index"],
+                                                       key_parts["y_index"],
+                                                       key_parts["z_index"],
+                                                       key_parts["t_index"])
 
                 # Call tile processor
-                handle = self.tile_processor.process(filename, msg["x_tile"],
-                                                               msg["y_tile"],
-                                                               msg["z_tile"],
-                                                               msg["time_sample"])
+                handle = self.tile_processor.process(filename,
+                                                     key_parts["x_index"],
+                                                     key_parts["y_index"],
+                                                     key_parts["z_index"],
+                                                     key_parts["t_index"])
 
-                # Upload tile
-                project_info = [msg["collection"], msg["experiment"], msg["channel"]]
-                object_key = self.backend.encode_tile_key(project_info,
-                                                          msg["resolution"],
-                                                          msg["x_tile"],
-                                                          msg["y_tile"],
-                                                          msg["z_tile"],
-                                                          msg["time_sample"])
                 try:
                     response = self.tile_bucket.put_object(ACL='private',
                                                            Body=handle,
-                                                           Key=object_key,
+                                                           Key=msg['tile_key'],
                                                            Metadata={
                                                                'message_id': message_id,
                                                                'receipt_handle': receipt_handle,
-                                                               "tile_size_x": "{}".format(self.config.config_data["ingest_job"]["tile_size"]["x"]),
-                                                               "tile_size_y": "{}".format(self.config.config_data["ingest_job"]["tile_size"]["y"])
+                                                               'chunk_key': msg['chunk_key'],
+                                                               'parameters': json.dumps(self.job_params),
+                                                               'tile_size_x': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["x"]),
+                                                               'tile_size_y': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["y"])
                                                            },
                                                            StorageClass='STANDARD')
                     logger.info("Successfully wrote file: {}".format(response.key))

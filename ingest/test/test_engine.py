@@ -39,21 +39,29 @@ class ResponsesMixin(object):
         responses._default_mock.__exit__()
 
     def add_default_response(self):
-        mocked_repsonse = {"ingest_job_id": 23}
-        responses.add(responses.POST, 'https://api.theboss.io/v0.5/ingest/job/',
+        mocked_repsonse = {"ingest_job": {"id": 23}}
+        responses.add(responses.POST, 'https://api.theboss.io/v0.6/ingest/',
                       json=mocked_repsonse, status=201)
 
-        mocked_repsonse = {"ingest_job_status": 1,
-                           "credentials": {"id":"asdfasdf", "secret": "asdfasdfasdfasdf"},
-                           "upload_queue": self.queue_url,
-                           "tile_bucket": "test-tile-store"}
-        responses.add(responses.GET, 'https://api.theboss.io/v0.5/ingest/job/23',
+        mocked_repsonse = {"ingest_job": {"id": 23,
+                                          "ingest_queue": "https://aws.com/myqueue1",
+                                          "upload_queue": self.queue_url,
+                                          "tile_bucket": self.tile_bucket_name,
+                                          "status": 1
+                                          },
+                           "KVIO_SETTINGS": {"settings": "go here"},
+                           "STATEIO_CONFIG": {"settings": "go here"},
+                           "OBJECTIO_CONFIG": {"settings": "go here"},
+                           "credentials": self.aws_creds
+                           }
+        responses.add(responses.GET, 'https://api.theboss.io/v0.6/ingest/23',
                       json=mocked_repsonse, status=200)
 
-        responses.add(responses.DELETE, 'https://api.theboss.io/v0.5/ingest/job/23', status=200)
+        responses.add(responses.DELETE, 'https://api.theboss.io/v0.6/ingest/23', status=200)
 
 
-class EngineTestMixin(object):
+
+class EngineBossTestMixin(object):
 
     def test_create_instance(self):
         """Method to test creating an instance from the factory"""
@@ -111,6 +119,10 @@ class EngineTestMixin(object):
     def test_run(self):
         """Test getting a task from the upload queue"""
         engine = Engine(self.config_file, self.api_token, 23)
+
+        # Put some stuff on the task queue
+        self.setup_helper.add_tasks(self.aws_creds["id"], self.aws_creds['secret'], self.queue_url, engine.backend)
+
         engine.join()
         engine.run()
 
@@ -126,7 +138,7 @@ class EngineTestMixin(object):
                 assert data.tell() == 182300
 
 
-class TestEngine(EngineTestMixin, ResponsesMixin, unittest.TestCase):
+class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -154,9 +166,6 @@ class TestEngine(EngineTestMixin, ResponsesMixin, unittest.TestCase):
 
         # mock aws creds
         cls.aws_creds = {"id": "asdfasdf", "secret": "asdfasdfasdfadsf"}
-
-        # Put some stuff on the task queue
-        cls.setup_helper.add_tasks(cls.aws_creds["id"], cls.aws_creds['secret'], cls.queue_url)
 
     @classmethod
     def tearDownClass(cls):
