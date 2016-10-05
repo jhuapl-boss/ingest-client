@@ -46,9 +46,10 @@ class ResponsesMixin(object):
         mocked_repsonse = {"ingest_job": {"id": 23,
                                           "ingest_queue": "https://aws.com/myqueue1",
                                           "upload_queue": self.queue_url,
-                                          "tile_bucket": self.tile_bucket_name,
+                                          "tile_bucket_name": self.tile_bucket_name,
                                           "status": 1
                                           },
+                           "ingest_lambda": "my_lambda",
                            "KVIO_SETTINGS": {"settings": "go here"},
                            "STATEIO_CONFIG": {"settings": "go here"},
                            "OBJECTIO_CONFIG": {"settings": "go here"},

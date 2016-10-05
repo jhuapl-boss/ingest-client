@@ -218,16 +218,19 @@ class Engine(object):
                                                      key_parts["t_index"])
 
                 try:
+                    metadata = {'chunk_key': msg['chunk_key'],
+                                'ingest_job': self.ingest_job_id,
+                                'parameters': self.job_params,
+                                'tile_size_x': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["x"]),
+                                'tile_size_y': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["y"])
+                                }
                     response = self.tile_bucket.put_object(ACL='private',
                                                            Body=handle,
                                                            Key=msg['tile_key'],
                                                            Metadata={
                                                                'message_id': message_id,
                                                                'receipt_handle': receipt_handle,
-                                                               'chunk_key': msg['chunk_key'],
-                                                               'parameters': json.dumps(self.job_params),
-                                                               'tile_size_x': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["x"]),
-                                                               'tile_size_y': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["y"])
+                                                               'metadata': json.dumps(metadata)
                                                            },
                                                            StorageClass='STANDARD')
                     logger.info("Successfully wrote file: {}".format(response.key))

@@ -304,11 +304,12 @@ class BossBackend(Backend):
                 # Good to join
                 creds = result["credentials"]
                 queue = result["ingest_job"]["upload_queue"]
-                tile_bucket = result["ingest_job"]["tile_bucket"]
+                tile_bucket = result["ingest_job"]["tile_bucket_name"]
 
                 # Setup params for the rest of the ingest process
                 params["upload_queue"] = result["ingest_job"]["upload_queue"]
                 params["ingest_queue"] = result["ingest_job"]["ingest_queue"]
+                params["ingest_lambda"] = result["ingest_lambda"]
                 params["KVIO_SETTINGS"] = result["KVIO_SETTINGS"]
                 params["STATEIO_CONFIG"] = result["STATEIO_CONFIG"]
                 params["OBJECTIO_CONFIG"] = result["OBJECTIO_CONFIG"]
