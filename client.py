@@ -121,6 +121,16 @@ def main():
     if args.job_id is None:
         # Create job
         engine.create_job()
+        print("Successfully Created Ingest Job ID: {}".format(engine.ingest_job_id))
+        print("Note: You need this ID to continue this job later!")
+
+        if not get_confirmation("Do you want to start uploading now?"):
+            print("OK - Your job is ready and waiting for you. You can resume by providing Ingest Job ID '{}' to the client".format(engine.ingest_job_id))
+            sys.exit(0)
+
+        # Join job
+        engine.join()
+
     else:
         # Join job
         engine.join()

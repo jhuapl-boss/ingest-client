@@ -127,7 +127,7 @@ class Engine(object):
 
 
         """
-        self.ingest_job_id = self.backend.create(self.config.to_json())
+        self.ingest_job_id = self.backend.create(self.config.config_data)
 
     def join(self):
         """
@@ -221,9 +221,8 @@ class Engine(object):
                     metadata = {'chunk_key': msg['chunk_key'],
                                 'ingest_job': self.ingest_job_id,
                                 'parameters': self.job_params,
-                                'tile_size_x': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["x"]),
-                                'tile_size_y': "{}".format(self.config.config_data["ingest_job"]["tile_size"]["y"])
                                 }
+                    handle.seek(0)
                     response = self.tile_bucket.put_object(ACL='private',
                                                            Body=handle,
                                                            Key=msg['tile_key'],

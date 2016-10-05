@@ -19,6 +19,7 @@ import boto3
 import hashlib
 from six.moves import configparser
 import os
+import time
 
 
 @six.add_metaclass(ABCMeta)
@@ -124,8 +125,8 @@ class Backend(object):
             None
 
         """
-        self.sqs = boto3.resource('sqs', region_name=region, aws_access_key_id=credentials["id"],
-                                  aws_secret_access_key=credentials["secret"])
+        self.sqs = boto3.resource('sqs', region_name=region, aws_access_key_id=credentials["access_key"],
+                                  aws_secret_access_key=credentials["secret_key"])
         self.queue = self.sqs.Queue(url=upload_queue)
 
     @abstractmethod
@@ -226,6 +227,7 @@ class BossBackend(Backend):
         self.api_headers = None
         Backend.__init__(self, config)
         self.api_version = "v0.6"
+        self.validate_ssl = False
 
     def setup(self, api_token=None):
         """
@@ -250,7 +252,7 @@ class BossBackend(Backend):
             except KeyError as e:
                 print("API Token not provided and ndio is not configured (config file located at ~/.ndio/ndio.cfg. Failed to setup backend: {}".format(e))
 
-        self.api_headers = {'Authorization': 'Token ' + api_token, 'Accept': 'application/json'}
+        self.api_headers = {'Authorization': 'Token ' + api_token, 'Accept': 'application/json', 'content-type': 'application/json'}
 
     def create(self, config_dict):
         """
@@ -265,12 +267,13 @@ class BossBackend(Backend):
 
         """
         r = requests.post('{}/{}/ingest/'.format(self.host, self.api_version), json=config_dict,
-                          headers=self.api_headers)
+                          headers=self.api_headers, verify=self.validate_ssl)
 
         if r.status_code != 201:
-            return "Failed to create ingest job. Verify configuration file."
+            msg = json.loads(r.content)
+            raise Exception("Failed to create ingest job. Server side validation of configuration file failed: {}".format(msg["message"]))
         else:
-            return r.json()['ingest_job']['id']
+            return r.json()['id']
 
     def join(self, ingest_job_id):
         """
@@ -288,7 +291,7 @@ class BossBackend(Backend):
 
         """
         r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
-                         headers=self.api_headers)
+                         headers=self.api_headers, verify=self.validate_ssl)
 
         if r.status_code != 200:
             raise Exception("Failed to join ingest job.")
@@ -304,7 +307,7 @@ class BossBackend(Backend):
                 # Good to join
                 creds = result["credentials"]
                 queue = result["ingest_job"]["upload_queue"]
-                tile_bucket = result["ingest_job"]["tile_bucket_name"]
+                tile_bucket = result["tile_bucket_name"]
 
                 # Setup params for the rest of the ingest process
                 params["upload_queue"] = result["ingest_job"]["upload_queue"]
@@ -315,6 +318,9 @@ class BossBackend(Backend):
                 params["OBJECTIO_CONFIG"] = result["OBJECTIO_CONFIG"]
 
                 self.setup_upload_queue(creds, queue, region="us-east-1")
+
+            # Make sure creds are ready
+            time.sleep(3)
 
             return status, creds, queue, tile_bucket, params
 
@@ -331,9 +337,9 @@ class BossBackend(Backend):
 
         """
         r = requests.delete('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
-                            headers=self.api_headers)
+                            headers=self.api_headers, verify=self.validate_ssl)
 
-        if r.status_code != 200:
+        if r.status_code != 204:
             raise Exception("Failed to join ingest job.")
 
     def get_task(self):
