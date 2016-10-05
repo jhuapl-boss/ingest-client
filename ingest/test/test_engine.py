@@ -53,7 +53,8 @@ class ResponsesMixin(object):
                            "KVIO_SETTINGS": {"settings": "go here"},
                            "STATEIO_CONFIG": {"settings": "go here"},
                            "OBJECTIO_CONFIG": {"settings": "go here"},
-                           "credentials": self.aws_creds
+                           "credentials": self.aws_creds,
+                           "resource": {"resource": "stuff"}
                            }
         responses.add(responses.GET, 'https://api.theboss.io/v0.6/ingest/23',
                       json=mocked_repsonse, status=200)
