@@ -39,17 +39,17 @@ class ResponsesMixin(object):
         responses._default_mock.__exit__()
 
     def add_default_response(self):
-        mocked_repsonse = {"ingest_job": {"id": 23}}
+        mocked_repsonse = {"id": 23}
         responses.add(responses.POST, 'https://api.theboss.io/v0.6/ingest/',
                       json=mocked_repsonse, status=201)
 
         mocked_repsonse = {"ingest_job": {"id": 23,
                                           "ingest_queue": "https://aws.com/myqueue1",
                                           "upload_queue": self.queue_url,
-                                          "tile_bucket_name": self.tile_bucket_name,
                                           "status": 1
                                           },
                            "ingest_lambda": "my_lambda",
+                           "tile_bucket_name": self.tile_bucket_name,
                            "KVIO_SETTINGS": {"settings": "go here"},
                            "STATEIO_CONFIG": {"settings": "go here"},
                            "OBJECTIO_CONFIG": {"settings": "go here"},
@@ -58,7 +58,7 @@ class ResponsesMixin(object):
         responses.add(responses.GET, 'https://api.theboss.io/v0.6/ingest/23',
                       json=mocked_repsonse, status=200)
 
-        responses.add(responses.DELETE, 'https://api.theboss.io/v0.6/ingest/23', status=200)
+        responses.add(responses.DELETE, 'https://api.theboss.io/v0.6/ingest/23', status=204)
 
 
 
@@ -122,7 +122,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
 
         # Put some stuff on the task queue
-        self.setup_helper.add_tasks(self.aws_creds["id"], self.aws_creds['secret'], self.queue_url, engine.backend)
+        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
 
         engine.join()
         engine.run()
@@ -166,7 +166,7 @@ class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
         cls.api_token = "aalasdklbajklsbfasdklbfkjdsb"
 
         # mock aws creds
-        cls.aws_creds = {"id": "asdfasdf", "secret": "asdfasdfasdfadsf"}
+        cls.aws_creds = {"access_key": "asdfasdf", "secret_key": "asdfasdfasdfadsf"}
 
     @classmethod
     def tearDownClass(cls):

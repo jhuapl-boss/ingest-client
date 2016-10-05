@@ -20,6 +20,7 @@ import hashlib
 from six.moves import configparser
 import os
 import time
+import botocore
 
 
 @six.add_metaclass(ABCMeta)
@@ -319,9 +320,6 @@ class BossBackend(Backend):
 
                 self.setup_upload_queue(creds, queue, region="us-east-1")
 
-            # Make sure creds are ready
-            time.sleep(3)
-
             return status, creds, queue, tile_bucket, params
 
     def cancel(self, ingest_job_id):
@@ -351,7 +349,19 @@ class BossBackend(Backend):
         Returns:
             (str, str, dict): message_id, receipt_handle, message contents
         """
-        msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=5)
+        try_cnt = 0
+        while try_cnt < 5:
+            try:
+                msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=5)
+                break
+            except botocore.exceptions.ClientError as e:
+                print("Waiting for credentials to be valid")
+                try_cnt += 1
+                time.sleep(3)
+
+                if try_cnt >= 5:
+                    raise Exception("Credentials failed to be come valid")
+
         if msg:
             return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)
         else:
