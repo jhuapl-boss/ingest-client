@@ -96,7 +96,7 @@ def main():
         # Trying to create or join an ingest
         if args.job_id is None:
             # Creating a new session - make sure the user wants to do this.
-            if not get_confirmation("Would you like to continue and create a NEW ingest job?"):
+            if not get_confirmation("Would you like to create a NEW ingest job?"):
                 # Don't want to create a new job
                 print("Ingest job cancelled")
                 sys.exit(0)

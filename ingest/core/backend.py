@@ -272,7 +272,13 @@ class BossBackend(Backend):
 
         if r.status_code != 201:
             msg = json.loads(r.content)
-            raise Exception("Failed to create ingest job. Server side validation of configuration file failed: {}".format(msg["message"]))
+            err_detail = None
+            if "detail" in msg:
+                err_detail = msg["detail"]
+            elif "message" in msg:
+                err_detail = msg["message"]
+
+            raise Exception("Failed to create ingest job. Server side validation of configuration file failed: {}".format(err_detail))
         else:
             return r.json()['id']
 
