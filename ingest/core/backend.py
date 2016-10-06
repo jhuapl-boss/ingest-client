@@ -229,6 +229,7 @@ class BossBackend(Backend):
         Backend.__init__(self, config)
         self.api_version = "v0.6"
         self.validate_ssl = False
+        self.credential_timeout = 3300  # Currently creds expire in 1 hr, so renew after 55 minutes
 
     def setup(self, api_token=None):
         """

@@ -36,6 +36,7 @@ class Engine(object):
         self.tile_processor = None
         self.path_processor = None
         self.backend_api_token = backend_api_token
+        self.credential_create_time = None
 
         # Properties of ingest after creation
         self.credentials = None
@@ -145,8 +146,10 @@ class Engine(object):
         """
         self.job_status, self.credentials, self.upload_job_queue, tile_bucket, self.job_params = self.backend.join(self.ingest_job_id)
 
+        # Set cred time
+        self.credential_create_time = datetime.datetime.now()
+
         # Setup bucket
-        # TODO: Possibly replace if ndingest lib is used as a dependency
         s3 = boto3.resource('s3')
         self.tile_bucket = s3.Bucket(tile_bucket)
 
@@ -191,6 +194,12 @@ class Engine(object):
         # Do some work
         while True:
             try:
+                # Check if you need to renew credentials
+                if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
+                    print("Renewing Credentials")
+                    logger.info("Renewing Credentials")
+                    self.join()
+
                 # Get a task
                 message_id, receipt_handle, msg = self.backend.get_task()
 
