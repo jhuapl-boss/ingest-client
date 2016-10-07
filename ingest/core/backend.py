@@ -233,6 +233,15 @@ class BossBackend(Backend):
         self.validate_ssl = True
         self.credential_timeout = 3300  # Currently creds expire in 1 hr, so renew after 55 minutes
 
+    def get_default_token_file_name(self):
+        """A method to return the default token file name. A method so it can be mocked.
+
+        Returns:
+            (str): Name of the default token file
+
+        """
+        return "token.json"
+
     def setup(self, api_token=None):
         """
         Method to configure the backend based on configuration parameters in the config file
@@ -250,7 +259,8 @@ class BossBackend(Backend):
         # Load API creds from ndio if needed.
         if not api_token:
             # First try to load token from ./credentials.json
-            cred_file = os.path.abspath(os.path.join(resource_filename("ingest", '..'), "credentials.json"))
+            cred_file = os.path.abspath(os.path.join(resource_filename("ingest", '..'),
+                                                     self.get_default_token_file_name()))
             if os.path.isfile(cred_file):
                 with open(cred_file, "rt") as cred_handle:
                     cred_data = json.load(cred_handle)

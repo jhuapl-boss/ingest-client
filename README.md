@@ -78,15 +78,15 @@ There are three ways to provide credentials to the ingest client.  The ingest cl
 	- You can directly pass your token to the ingest client when starting it from the command line. See the *Usage* section below.
 	
 2. **Via the credential.json file**
-	- Copy the example credentials.json file
+	- Copy the example token.json file
 	
 		```
-		cp ./credentials.json.example ./credentials.json 
+		cp ./token.json.example ./token.json 
 		```
 	- Get your API token.  Currently this can be done by visiting the [temporary token page](https://api.theboss.io/token). This will be replaced in the future with the Boss Management Console
 	
 	
-	- Copy your API token to the credentials.json file, replacing `<insert_token_here>`
+	- Copy your API token to the token.json file, replacing `<insert_token_here>`
 
 3. **Via the ndio configuration file**
 	- If you have already install [ndio](https://github.com/jhuapl-boss/ndio) and added your API token to it's configuration file the ingest client can automatically load the token
