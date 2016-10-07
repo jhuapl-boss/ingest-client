@@ -21,6 +21,8 @@ from six.moves import configparser
 import os
 import time
 import botocore
+from pkg_resources import resource_filename
+
 
 
 @six.add_metaclass(ABCMeta)
@@ -247,14 +249,22 @@ class BossBackend(Backend):
 
         # Load API creds from ndio if needed.
         if not api_token:
-            try:
-                cfg_parser = configparser.ConfigParser()
-                cfg_parser.read(os.path.expanduser("~/.ndio/ndio.cfg"))
-                api_token = cfg_parser.get("Project Service", "token")
-            except KeyError as e:
-                print("API Token not provided and ndio is not configured (config file located at ~/.ndio/ndio.cfg. Failed to setup backend: {}".format(e))
+            # First try to load token from ./credentials.json
+            cred_file = os.path.abspath(os.path.join(resource_filename("ingest", '..'), "credentials.json"))
+            if os.path.isfile(cred_file):
+                with open(cred_file, "rt") as cred_handle:
+                    cred_data = json.load(cred_handle)
+                    api_token = cred_data["token"]
+            else:
+                try:
+                    cfg_parser = configparser.ConfigParser()
+                    cfg_parser.read(os.path.expanduser("~/.ndio/ndio.cfg"))
+                    api_token = cfg_parser.get("Project Service", "token")
+                except KeyError as e:
+                    print("API Token not provided. Failed to setup backend: {}".format(e))
 
-        self.api_headers = {'Authorization': 'Token ' + api_token, 'Accept': 'application/json', 'content-type': 'application/json'}
+        self.api_headers = {'Authorization': 'Token ' + api_token, 'Accept': 'application/json',
+                            'content-type': 'application/json'}
 
     def create(self, config_dict):
         """

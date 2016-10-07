@@ -97,7 +97,7 @@ class Engine(object):
         if not log_file:
             log_file = 'ingest_log{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             datefmt='%m-%d %H:%M',
                             filename=log_file,
@@ -152,6 +152,9 @@ class Engine(object):
         # Setup bucket
         s3 = boto3.resource('s3')
         self.tile_bucket = s3.Bucket(tile_bucket)
+
+        logger = logging.getLogger('ingest-client')
+        logger.info("CREATED INGEST JOB: {}".format(self.ingest_job_id))
 
     def cancel(self):
         """

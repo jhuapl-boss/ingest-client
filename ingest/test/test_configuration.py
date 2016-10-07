@@ -18,7 +18,11 @@ import unittest
 import json
 import tempfile
 import responses
-import six
+
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 from ingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
 from ingest.core.validator import BossValidatorV01
@@ -27,6 +31,10 @@ from ingest.plugins.path import TestPathProcessor
 from ingest.plugins.tile import TestTileProcessor
 
 from pkg_resources import resource_filename
+
+
+def token_name_side_effect():
+    return "token.json.example"
 
 
 class TestConfigPropertyObject(unittest.TestCase):
@@ -166,18 +174,22 @@ class ConfigurationTestMixin(object):
 
         assert isinstance(v, BossValidatorV01)
 
+
+class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
+
     @responses.activate
     def test_get_backend(self):
         """Test dynamically getting the validator class"""
+        patcher = mock.patch('ingest.core.backend.BossBackend.get_default_token_file_name')
+        mock_cred_path = patcher.start()
+        mock_cred_path.side_effect = token_name_side_effect
+
         config = Configuration(self.example_config_data)
 
         b = config.get_backend()
         b.setup(self.api_token)
 
         assert isinstance(b, BossBackend)
-
-
-class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):

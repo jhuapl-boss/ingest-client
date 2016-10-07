@@ -50,7 +50,7 @@ def main():
     parser.add_argument("--api-token", "-a",
                         default=None,
                         help="Token for API authentication. If not provided and ndio is configured those credentials will automatically be used.")
-    parser.add_argument("--job-id", "-i",
+    parser.add_argument("--job-id", "-j",
                         default=None,
                         help="ID of the ingest job if joining an existing ingest job")
     parser.add_argument("--log-file", "-l",
