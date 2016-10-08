@@ -3,5 +3,5 @@ languages:
 
 
 exclude_paths:
-- "test/"
-- "ingest/test/"
+- "test/*"
+- "ingest/test/*"
