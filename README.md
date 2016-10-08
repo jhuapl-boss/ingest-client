@@ -1,5 +1,5 @@
 # Ingest Client
-A Python 2/3 command line application for performing distributed ingest of image data into the Boss 
+A Python command line application for performing distributed ingest of image data into the Boss 
 
 [![theBoss.io](https://img.shields.io/badge/visit-theBoss.io-blue.svg)](https://docs.theboss.io/)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
@@ -8,7 +8,7 @@ A Python 2/3 command line application for performing distributed ingest of image
 [![CircleCI](https://circleci.com/gh/jhuapl-boss/ingest-client/tree/master.svg?style=svg)](https://circleci.com/gh/jhuapl-boss/ingest-client/tree/master)
 
 ## Overview
-The ingest client application lets users of the Boss move data from local store to the Boss quickly and reliably. It Blah blhablh 
+The ingest client application lets users move data from local storage into the Boss, quickly and reliably. It supports both Python 2 and 3.
 
 ## Installation
 
@@ -47,7 +47,7 @@ The ingest client application lets users of the Boss move data from local store 
 	- Using [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/):
 	
 	```
-	mkvirtalenv ingest-env
+	mkvirtualenv ingest-env
 	```
 	
 - Install Python dependencies
@@ -74,12 +74,12 @@ You must provide the ingest client with your Boss API token so it can make authe
 
 Also remember that you must have write permissions to the resource (`collection`, `experiment`, and `channel`) where data is to be written, as specified in the ingest job configuration file. If you created the resources you will automatically have access.
 
-There are three ways to provide credentials to the ingest client.  The ingest client will try to use the first credentials it finds in the follow order:
+There are three ways to provide your API token to the ingest client.  The ingest client will try to use the first token it finds in the following order:
 
 1. **Via command line arguments**
 	- You can directly pass your token to the ingest client when starting it from the command line. See the *Usage* section below.
 	
-2. **Via the credential.json file**
+2. **Via the token.json file**
 	- Copy the example token.json file
 	
 		```
@@ -91,7 +91,7 @@ There are three ways to provide credentials to the ingest client.  The ingest cl
 	- Copy your API token to the token.json file, replacing `<insert_token_here>`
 
 3. **Via the ndio configuration file**
-	- If you have already install [ndio](https://github.com/jhuapl-boss/ndio) and added your API token to it's configuration file the ingest client can automatically load the token
+	- If you have already installed [ndio](https://github.com/jhuapl-boss/ndio) and added your API token to its configuration file, the ingest client will automatically load the token
 	
 
 ## Usage
@@ -112,7 +112,7 @@ There are three operations you can perform with the ingest client - Create, Join
 	- After creating the new Ingest Job, the client will print the ingest job ID and it will be also logged.  **Remember this ID** if you wish to restart the client or run the client on additional nodes for increased throughput
 	
 - **Joining an EXISTING Ingest Job**
-	- You can join and existing ingest job and start uploading data any time after it has been created. This can be useful if the client has crashed, or if you want to run the client on additional nodes in parallel.
+	- You can join an existing ingest job and start uploading data any time after it has been created. This can be useful if the client has crashed, or if you want to run the client on additional nodes in parallel.
 	
 		```
 		python client.py <absolute_path_to_config_file> --job-id <ingest_job_id>
@@ -136,9 +136,11 @@ There are three operations you can perform with the ingest client - Create, Join
 		```
  
 
+
+
 ## Plugins
 
-To enable support for many different ways to organize data and many different types of file formats, plugins are used to convert tile indicies to a file handle for uploading.  Some plugins have been initially provided as an example:
+To enable support for many different ways to organize data and many different types of file formats, plugins are used to convert tile indices to a file handle for uploading.  Some plugins have been initially provided as an example:
 
 - [CATMAID](http://catmaid.readthedocs.io/en/stable/tile_sources.html) File-based image stack
 	- `path_processor``class` = "ingest.plugins.filesystem.CatmaidFileImageStackPathProcessor"
