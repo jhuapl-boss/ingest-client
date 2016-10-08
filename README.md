@@ -3,6 +3,8 @@ A Python 2/3 command line application for performing distributed ingest of image
 
 [![theBoss.io](https://img.shields.io/badge/visit-theBoss.io-blue.svg)](https://docs.theboss.io/)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+[![Code Climate](https://codeclimate.com/github/jhuapl-boss/ingest-client/badges/gpa.svg)](https://codeclimate.com/github/jhuapl-boss/ingest-client)
+[![Coverage Status](https://coveralls.io/repos/github/jhuapl-boss/ingest-client/badge.svg?branch=master)](https://coveralls.io/github/jhuapl-boss/ingest-client?branch=master)
 [![CircleCI](https://circleci.com/gh/jhuapl-boss/ingest-client/tree/master.svg?style=svg)](https://circleci.com/gh/jhuapl-boss/ingest-client/tree/master)
 
 ## Overview
