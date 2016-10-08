@@ -1,2 +1,5 @@
 exclude_paths:
 - "ingest/test/"
+
+languages:
+   Python: true
