@@ -27,7 +27,7 @@
   "database": {
     "collection": "my_col_1",
     "experiment": "my_exp_1",
-    "channel_layer": "my_ch_1"
+    "channel": "my_ch_1"
   },
   "ingest_job": {
     "resolution": 0,

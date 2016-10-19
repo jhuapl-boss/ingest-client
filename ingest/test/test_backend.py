@@ -217,7 +217,7 @@ class BossBackendTestMixin(object):
 
         assert parts["collection"] == params['collection']
         assert parts["experiment"] == params['experiment']
-        assert parts["channel_layer"] == params['channel']
+        assert parts["channel"] == params['channel']
         assert parts["resolution"] == params['resolution']
         assert parts["x_index"] == params['x_index']
         assert parts["y_index"] == params['y_index']
@@ -253,7 +253,7 @@ class BossBackendTestMixin(object):
 
         assert parts["collection"] == params['collection']
         assert parts["experiment"] == params['experiment']
-        assert parts["channel_layer"] == params['channel']
+        assert parts["channel"] == params['channel']
         assert parts["resolution"] == params['resolution']
         assert parts["x_index"] == params['x_index']
         assert parts["y_index"] == params['y_index']

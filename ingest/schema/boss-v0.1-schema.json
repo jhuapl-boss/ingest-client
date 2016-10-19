@@ -91,14 +91,14 @@
         "experiment": {
           "type": "string"
         },
-        "channel_layer": {
+        "channel": {
           "type": "string"
         }
       },
       "required": [
         "collection",
         "experiment",
-        "channel_layer"
+        "channel"
       ]
     },
     "ingest_job": {
