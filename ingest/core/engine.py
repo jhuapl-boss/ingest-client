@@ -11,12 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
+
 from ingest.core.config import Configuration, ConfigFileError
-import boto3
 from six.moves import input
 import logging
 import datetime
 import json
+import time
 
 
 class Engine(object):
@@ -76,6 +78,7 @@ class Engine(object):
 
         # Load Config file and validate
         self.config = Configuration(config_data)
+        self.config.load_plugins()
 
         # Get backend
         self.backend = self.config.get_backend(self.backend_api_token)
@@ -130,6 +133,9 @@ class Engine(object):
         """
         self.ingest_job_id = self.backend.create(self.config.config_data)
 
+        logger = logging.getLogger('ingest-client')
+        logger.info("CREATED INGEST JOB: {}".format(self.ingest_job_id))
+
     def join(self):
         """
         Method to join an ingest job upload
@@ -144,17 +150,13 @@ class Engine(object):
 
 
         """
-        self.job_status, self.credentials, self.upload_job_queue, tile_bucket, self.job_params = self.backend.join(self.ingest_job_id)
+        self.job_status, self.credentials, self.upload_job_queue, self.tile_bucket, self.job_params = self.backend.join(self.ingest_job_id)
 
         # Set cred time
         self.credential_create_time = datetime.datetime.now()
 
-        # Setup bucket
-        s3 = boto3.resource('s3')
-        self.tile_bucket = s3.Bucket(tile_bucket)
-
         logger = logging.getLogger('ingest-client')
-        logger.info("CREATED INGEST JOB: {}".format(self.ingest_job_id))
+        logger.info("JOINED INGEST JOB: {}".format(self.ingest_job_id))
 
     def cancel(self):
         """
@@ -195,6 +197,8 @@ class Engine(object):
             raise Exception(msg)
 
         # Do some work
+        exiting = False
+        wait_cnt = 0
         while True:
             try:
                 # Check if you need to renew credentials
@@ -207,8 +211,18 @@ class Engine(object):
                 message_id, receipt_handle, msg = self.backend.get_task()
 
                 if not msg:
-                    break
+                    time.sleep(10)
+                    wait_cnt += 1
+                    if wait_cnt == 1:
+                        print("Waiting up to 3 minutes for upload tasks to appear.", end="", flush=True)
+                        continue
+                    elif wait_cnt < 20:
+                        print(".", end="", flush=True)
+                        continue
+                    else:
+                        break
 
+                wait_cnt = 0
                 # TODO: DMK Verify and update once message format is finalized
                 key_parts = self.backend.decode_tile_key(msg['tile_key'])
                 logger.info("Processing Task -  X:{} Y:{} Z:{} T:{}".format(key_parts["x_index"],
@@ -235,22 +249,22 @@ class Engine(object):
                                 'parameters': self.job_params,
                                 }
                     handle.seek(0)
-                    response = self.tile_bucket.put_object(ACL='private',
-                                                           Body=handle,
-                                                           Key=msg['tile_key'],
-                                                           Metadata={
-                                                               'message_id': message_id,
-                                                               'receipt_handle': receipt_handle,
-                                                               'metadata': json.dumps(metadata)
-                                                           },
-                                                           StorageClass='STANDARD')
+                    response = self.backend.bucket.put_object(ACL='private',
+                                                              Body=handle,
+                                                              Key=msg['tile_key'],
+                                                              Metadata={
+                                                                  'message_id': message_id,
+                                                                  'receipt_handle': receipt_handle,
+                                                                  'metadata': json.dumps(metadata)
+                                                              },
+                                                              StorageClass='STANDARD')
                     logger.info("Successfully wrote file: {}".format(response.key))
 
                 except Exception as e:
-                    logger.error("Upload Failed -  X:{} Y:{} Z:{} T:{} - {}".format(msg["x_tile"],
-                                                                                    msg["y_tile"],
-                                                                                    msg["z_tile"],
-                                                                                    msg["time_sample"],
+                    logger.error("Upload Failed -  X:{} Y:{} Z:{} T:{} - {}".format(key_parts["x_index"],
+                                                                                    key_parts["y_index"],
+                                                                                    key_parts["z_index"],
+                                                                                    key_parts["t_index"],
                                                                                     e))
 
             except KeyboardInterrupt:
@@ -269,9 +283,11 @@ class Engine(object):
 
                 if quit_run:
                     print("Stopping upload engine.")
+                    exiting = True
                     break
 
-        logger.info("No more tasks remaining.")
+        if not exiting:
+            logger.info("No more tasks remaining.")
 
 
 

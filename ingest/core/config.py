@@ -383,6 +383,12 @@ class Configuration(object):
         with open(os.path.join(resource_filename("ingest", "schema"), "{}.json".format(schema_name)), 'rt') as schema_file:
             self.schema = json.load(schema_file)
 
+    def load_plugins(self):
+        """Method to load the plugins
+
+        Returns:
+            None
+        """
         # Create plugin instances
         package, class_name = self.config_data["client"]["tile_processor"]["class"].rsplit('.', 1)
         tile_module = importlib.import_module(package)

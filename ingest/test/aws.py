@@ -90,7 +90,13 @@ class Setup(object):
     def _create_queue(self, queue_name):
         """Method to create a test sqs queue"""
         client = boto3.client('sqs', region_name=self.region)
-        response = client.create_queue(QueueName=queue_name)
+        # Set big visibility timeout because nothing is deleting messages (no lambda running on unit tests)
+        response = client.create_queue(QueueName=queue_name,
+                                       Attributes={
+                                         'VisibilityTimeout': '500',
+                                         'DelaySeconds': '0',
+                                         'MaximumMessageSize': '262144'
+                                       })
         url = response['QueueUrl']
         return url
 

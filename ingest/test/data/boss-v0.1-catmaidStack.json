@@ -11,14 +11,14 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "ingest.plugins.filesystem.CatmaidFileImageStackPathProcessor",
+      "class": "ingest.plugins.catmaid.CatmaidFileImageStackPathProcessor",
       "params": {
         "root_dir": "",
         "filetype": "png"
       }
     },
     "tile_processor": {
-      "class": "ingest.plugins.filesystem.CatmaidFileImageStackTileProcessor",
+      "class": "ingest.plugins.catmaid.CatmaidFileImageStackTileProcessor",
       "params": {
         "filetype": "png"
       }

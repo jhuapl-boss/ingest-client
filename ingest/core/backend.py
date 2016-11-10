@@ -22,7 +22,7 @@ import os
 import time
 import botocore
 from pkg_resources import resource_filename
-
+import os
 
 
 @six.add_metaclass(ABCMeta)
@@ -38,6 +38,8 @@ class Backend(object):
         self.config = config
         self.sqs = None
         self.queue = None
+        self.s3 = None
+        self.bucket = None
 
     @abstractmethod
     def setup(self):
@@ -131,6 +133,23 @@ class Backend(object):
         self.sqs = boto3.resource('sqs', region_name=region, aws_access_key_id=credentials["access_key"],
                                   aws_secret_access_key=credentials["secret_key"])
         self.queue = self.sqs.Queue(url=upload_queue)
+
+    def setup_tile_bucket(self, credentials, tile_bucket, region="us-east-1"):
+        """
+        Method to create a connection to the tile bucket
+
+        Args:
+            credentials(dict): AWS credentials
+            tile_bucket(str): The name of the bucket
+            region(str): The AWS region where the SQS queue exists
+
+        Returns:
+            None
+
+        """
+        self.s3 = boto3.resource('s3', region_name=region, aws_access_key_id=credentials["access_key"],
+                                 aws_secret_access_key=credentials["secret_key"])
+        self.bucket = self.s3.Bucket(tile_bucket)
 
     @abstractmethod
     def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
@@ -229,7 +248,7 @@ class BossBackend(Backend):
         self.host = None
         self.api_headers = None
         Backend.__init__(self, config)
-        self.api_version = "v0.6"
+        self.api_version = "v0.7"
         self.validate_ssl = True
         self.credential_timeout = 3300  # Currently creds expire in 1 hr, so renew after 55 minutes
 
@@ -266,12 +285,22 @@ class BossBackend(Backend):
                     cred_data = json.load(cred_handle)
                     api_token = cred_data["token"]
             else:
-                try:
-                    cfg_parser = configparser.ConfigParser()
-                    cfg_parser.read(os.path.expanduser("~/.ndio/ndio.cfg"))
-                    api_token = cfg_parser.get("Project Service", "token")
-                except KeyError as e:
-                    print("API Token not provided. Failed to setup backend: {}".format(e))
+                # Then try env
+                if "INTERN_TOKEN" in os.environ:
+                    api_token = os.environ["INTERN_TOKEN"]
+                else:
+                    # Try to see if intern config file is setup
+                    try:
+                        cfg_parser = configparser.ConfigParser()
+                        cfg_parser.read(os.path.expanduser("~/.intern/intern.cfg"))
+                        if "Default" in cfg_parser.sections():
+                            api_token = cfg_parser.get("Default", "token")
+                        elif "Project Service" in cfg_parser.sections():
+                            api_token = cfg_parser.get("Project Service", "token")
+                        else:
+                            raise ValueError("Could not load config from ~/.intern/intern.cfg")
+                    except KeyError as e:
+                        print("API Token not provided. Failed to setup backend: {}".format(e))
 
         self.api_headers = {'Authorization': 'Token ' + api_token, 'Accept': 'application/json',
                             'content-type': 'application/json'}
@@ -292,7 +321,7 @@ class BossBackend(Backend):
                           headers=self.api_headers, verify=self.validate_ssl)
 
         if r.status_code != 201:
-            msg = json.loads(r.content)
+            msg = r.json()
             err_detail = None
             if "detail" in msg:
                 err_detail = msg["detail"]
@@ -347,6 +376,7 @@ class BossBackend(Backend):
                 params["resource"] = result["resource"]
 
                 self.setup_upload_queue(creds, queue, region="us-east-1")
+                self.setup_tile_bucket(creds, tile_bucket, region="us-east-1")
 
             return status, creds, queue, tile_bucket, params
 
@@ -378,16 +408,16 @@ class BossBackend(Backend):
             (str, str, dict): message_id, receipt_handle, message contents
         """
         try_cnt = 0
-        while try_cnt < 5:
+        while try_cnt < 19:
             try:
-                msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=5)
+                msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=1)
                 break
             except botocore.exceptions.ClientError as e:
                 print("Waiting for credentials to be valid")
                 try_cnt += 1
-                time.sleep(3)
+                time.sleep(5)
 
-                if try_cnt >= 5:
+                if try_cnt >= 20:
                     raise Exception("Credentials failed to be come valid")
 
         if msg:

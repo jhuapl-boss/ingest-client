@@ -104,6 +104,7 @@ class TestSingleMultipageTiff(unittest.TestCase):
                                                                                                               "test_multipage.tif")
 
         cls.config = Configuration(cls.example_config_data)
+        cls.config.load_plugins()
 
 
 

@@ -69,7 +69,6 @@ class TestCatmaidFileImageStack(unittest.TestCase):
 
     def test_CatmaidFileImageStackTileProcessor_process(self):
         """Test running the tile processor"""
-        pass
         pp = self.config.path_processor_class
         pp.setup(self.config.get_path_processor_params())
 
@@ -93,7 +92,6 @@ class TestCatmaidFileImageStack(unittest.TestCase):
 
     def test_CatmaidFileImageStackTileProcessor_process2(self):
         """Test running the tile processor"""
-        pass
         pp = self.config.path_processor_class
         pp.setup(self.config.get_path_processor_params())
 
@@ -127,6 +125,7 @@ class TestCatmaidFileImageStack(unittest.TestCase):
                                                                                                       "test/data/example_catmaid_stack")
 
         cls.config = Configuration(cls.example_config_data)
+        cls.config.load_plugins()
 
 
 
