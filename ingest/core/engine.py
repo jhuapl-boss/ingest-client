@@ -11,14 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import print_function
-
 from ingest.core.config import Configuration, ConfigFileError
 from six.moves import input
 import logging
 import datetime
 import json
 import time
+import sys
 
 
 class Engine(object):
@@ -214,10 +213,14 @@ class Engine(object):
                     time.sleep(10)
                     wait_cnt += 1
                     if wait_cnt == 1:
-                        print("Waiting up to 3 minutes for upload tasks to appear.", end="", flush=True)
+                        sys.stdout.write("Waiting up to 3 minutes for upload tasks to appear.")
+                        sys.stdout.flush()
+                        #print("Waiting up to 3 minutes for upload tasks to appear.", end="", flush=True)
                         continue
                     elif wait_cnt < 20:
-                        print(".", end="", flush=True)
+                        sys.stdout.write(".")
+                        sys.stdout.flush()
+                        #print(".", end="", flush=True)
                         continue
                     else:
                         break
