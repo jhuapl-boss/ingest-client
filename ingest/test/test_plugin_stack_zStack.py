@@ -42,12 +42,6 @@ class ZImageStackMixin(object):
         pp.setup(self.config.get_path_processor_params())
 
         with self.assertRaises(IndexError):
-            pp.process(1, 0, 0, 0)
-
-        with self.assertRaises(IndexError):
-            pp.process(0, 2, 0, 0)
-
-        with self.assertRaises(IndexError):
             pp.process(0, 0, 3, 0)
 
         with self.assertRaises(IndexError):
