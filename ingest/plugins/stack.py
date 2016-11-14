@@ -69,8 +69,8 @@ class ZindexStackPathProcessor(PathProcessor):
             (str): An absolute file path that contains the specified data
 
         """
-        if t_index != 0 or x_index != 0 or y_index != 0:
-            raise IndexError("Z Image Stack only supports incrementing the z_index")
+        if t_index != 0:
+            raise IndexError("Z Image Stack only supports non-time series data")
 
         if z_index >= self.parameters["ingest_job"]["extent"]["z"][1]:
             raise IndexError("Z-index out of range")
@@ -125,7 +125,8 @@ class ZindexStackTileProcessor(TileProcessor):
 
     def process(self, file_path, x_index, y_index, z_index, t_index=0):
         """
-        Method to load the image file. Currently makes sure the uploaded image is a png file.
+        Method to load the image file. Can break the image into smaller tiles to help make ingest go smoother, but
+        currently must be perfectly divisible
 
         Args:
             file_path(str): An absolute file path for the specified tile
@@ -138,15 +139,19 @@ class ZindexStackTileProcessor(TileProcessor):
             (io.BufferedReader): A file handle for the specified tile
 
         """
+        # Load tile
         file_handle = self.fs.get_file(file_path)
-        if self.parameters["extension"].lower() != "png":
-            # Save img to png and return handle
-            tile_data = Image.open(file_handle)
 
-            output = six.BytesIO()
-            tile_data.save(output, format=self.parameters["extension"].upper())
+        x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
+                   self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
+        y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
+                   self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
 
-            # Send handle back
-            return output
-        else:
-            return file_handle
+        # Save sub-img to png and return handle
+        tile_data = Image.open(file_handle)
+        upload_img = tile_data.crop((x_range[0], y_range[0], x_range[1], y_range[1]))
+        output = six.BytesIO()
+        upload_img.save(output, format=self.parameters["extension"].upper())
+
+        # Send handle back
+        return output
