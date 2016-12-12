@@ -107,9 +107,6 @@ def main():
                 print("Ingest job cancelled")
                 sys.exit(0)
 
-    # TODO: Add channel creation
-    # Create Channel if needed
-
     # Setup engine instance.  Prompt user to confirm things if needed
     question_msgs = engine.setup(args.log_file)
     if question_msgs:

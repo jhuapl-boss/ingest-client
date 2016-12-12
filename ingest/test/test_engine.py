@@ -46,7 +46,8 @@ class ResponsesMixin(object):
         mocked_repsonse = {"ingest_job": {"id": 23,
                                           "ingest_queue": "https://aws.com/myqueue1",
                                           "upload_queue": self.queue_url,
-                                          "status": 1
+                                          "status": 1,
+                                          "tile_count": 500,
                                           },
                            "ingest_lambda": "my_lambda",
                            "tile_bucket_name": self.tile_bucket_name,

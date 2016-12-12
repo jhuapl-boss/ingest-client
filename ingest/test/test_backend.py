@@ -42,7 +42,8 @@ class ResponsesMixin(object):
         mocked_repsonse = {"ingest_job": {"id": 23,
                                           "ingest_queue": "https://aws.com/myqueue1",
                                           "upload_queue": self.queue_url,
-                                          "status": 1
+                                          "status": 1,
+                                          "tile_count": 500
                                           },
                            "ingest_lambda": "my_lambda",
                            "tile_bucket_name": self.tile_bucket_name,
@@ -96,13 +97,14 @@ class BossBackendTestMixin(object):
         b = BossBackend(self.example_config_data)
         b.setup(self.api_token)
 
-        status, creds, queue_url, tile_bucket, params = b.join(23)
+        status, creds, queue_url, tile_bucket, params, tile_count = b.join(23)
 
         assert b.queue.url == self.queue_url
         assert status == 1
         assert creds == self.aws_creds
         assert queue_url == self.queue_url
         assert tile_bucket == self.tile_bucket_name
+        assert tile_count == 500
         assert 'KVIO_SETTINGS' in params
         assert 'OBJECTIO_CONFIG' in params
         assert 'STATEIO_CONFIG' in params

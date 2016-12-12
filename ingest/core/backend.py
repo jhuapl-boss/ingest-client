@@ -18,11 +18,12 @@ import json
 import boto3
 import hashlib
 from six.moves import configparser
-import os
 import time
 import botocore
 from pkg_resources import resource_filename
 import os
+
+from ingest.utils import WaitPrinter
 
 
 @six.add_metaclass(ABCMeta)
@@ -75,16 +76,15 @@ class Backend(object):
         """
         Method to join an ingest job upload
 
-        Job Status: {0: Preparing, 1: Uploading, 2: Complete}
+        Job Status: {0: Preparing, 1: Uploading, 2: Complete, 3: Deleted}
 
         Args:
             ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int, dict, str, dict): The job status, AWS credentials, and SQS upload_job_queue, config_params to pass
-                                    along during upload via metadata
-
-
+            (int, dict, str, str, dict, int): The job status, AWS credentials, and SQS upload_job_queue,
+                                              tile bucket name, config_params to pass along during upload via metadata,
+                                              and tile count
         """
         return NotImplemented
 
@@ -250,7 +250,7 @@ class BossBackend(Backend):
         Backend.__init__(self, config)
         self.api_version = "v0.7"
         self.validate_ssl = True
-        self.credential_timeout = 3300  # Currently creds expire in 1 hr, so renew after 55 minutes
+        self.credential_timeout = 3300  # Currently credentials expire in 1 hr, so renew after 55 minutes
 
     def get_default_token_file_name(self):
         """A method to return the default token file name. A method so it can be mocked.
@@ -275,7 +275,7 @@ class BossBackend(Backend):
         self.host = "{}://{}".format(self.config["client"]["backend"]["protocol"],
                                      self.config["client"]["backend"]["host"])
 
-        # Load API creds from ndio if needed.
+        # Load API credentials from intern if needed.
         if not api_token:
             # First try to load token from ./credentials.json
             cred_file = os.path.abspath(os.path.join(resource_filename("ingest", '..'),
@@ -317,6 +317,7 @@ class BossBackend(Backend):
 
 
         """
+        print("Submitting ingest job configuration for creation...")
         r = requests.post('{}/{}/ingest/'.format(self.host, self.api_version), json=config_dict,
                           headers=self.api_headers, verify=self.validate_ssl)
 
@@ -342,43 +343,45 @@ class BossBackend(Backend):
             ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int, dict, str, str, dict): The job status, AWS credentials, and SQS upload_job_queue, tile bucket name
-                                         config_params to pass along during upload via metadata
-
-
+            (int, dict, str, str, dict, int): The job status, AWS credentials, and SQS upload_job_queue,
+                                              tile bucket name, config_params to pass along during upload via metadata,
+                                              and tile count
         """
-        r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
-                         headers=self.api_headers, verify=self.validate_ssl)
+        wp = WaitPrinter()
+        while True:
+            r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
+                             headers=self.api_headers, verify=self.validate_ssl)
 
-        if r.status_code != 200:
-            raise Exception("Failed to join ingest job.")
-        else:
-            result = r.json()
-            status = result['ingest_job']["status"]
-            creds = {}
-            queue = ""
-            params = {}
-            tile_bucket = ""
+            if r.status_code != 200:
+                raise Exception("Failed to join ingest job: {}".format(r.text))
+            else:
+                result = r.json()
+                job_status = int(result['ingest_job']["status"])
+                wp.print("Waiting for ingest job to be created")
+                if job_status == 0:
+                    time.sleep(5)
+                else:
+                    wp.finished()
 
-            if result['ingest_job']["status"] == 1:
-                # Good to join
-                creds = result["credentials"]
-                queue = result["ingest_job"]["upload_queue"]
-                tile_bucket = result["tile_bucket_name"]
+                    creds = result["credentials"]
+                    queue = result["ingest_job"]["upload_queue"]
+                    tile_bucket = result["tile_bucket_name"]
+                    num_tiles = result["ingest_job"]["tile_count"]
 
-                # Setup params for the rest of the ingest process
-                params["upload_queue"] = result["ingest_job"]["upload_queue"]
-                params["ingest_queue"] = result["ingest_job"]["ingest_queue"]
-                params["ingest_lambda"] = result["ingest_lambda"]
-                params["KVIO_SETTINGS"] = result["KVIO_SETTINGS"]
-                params["STATEIO_CONFIG"] = result["STATEIO_CONFIG"]
-                params["OBJECTIO_CONFIG"] = result["OBJECTIO_CONFIG"]
-                params["resource"] = result["resource"]
+                    # Setup params for the rest of the ingest process
+                    params = {}
+                    params["upload_queue"] = result["ingest_job"]["upload_queue"]
+                    params["ingest_queue"] = result["ingest_job"]["ingest_queue"]
+                    params["ingest_lambda"] = result["ingest_lambda"]
+                    params["KVIO_SETTINGS"] = result["KVIO_SETTINGS"]
+                    params["STATEIO_CONFIG"] = result["STATEIO_CONFIG"]
+                    params["OBJECTIO_CONFIG"] = result["OBJECTIO_CONFIG"]
+                    params["resource"] = result["resource"]
 
-                self.setup_upload_queue(creds, queue, region="us-east-1")
-                self.setup_tile_bucket(creds, tile_bucket, region="us-east-1")
+                    self.setup_upload_queue(creds, queue, region="us-east-1")
+                    self.setup_tile_bucket(creds, tile_bucket, region="us-east-1")
 
-            return status, creds, queue, tile_bucket, params
+                    return job_status, creds, queue, tile_bucket, params, num_tiles
 
     def cancel(self, ingest_job_id):
         """
@@ -398,7 +401,7 @@ class BossBackend(Backend):
         if r.status_code != 204:
             raise Exception("Failed to join ingest job.")
 
-    def get_task(self):
+    def get_task(self, num_messages=1):
         """
         Method to get an upload task
 

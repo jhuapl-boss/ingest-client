@@ -47,6 +47,7 @@ class Engine(object):
         self.job_status = 0
         self.tile_bucket = None
         self.job_params = None
+        self.tile_count = 0
 
         if config_file:
             self.load_configuration(config_file)
@@ -150,7 +151,7 @@ class Engine(object):
 
 
         """
-        self.job_status, self.credentials, self.upload_job_queue, self.tile_bucket, self.job_params = self.backend.join(self.ingest_job_id)
+        self.job_status, self.credentials, self.upload_job_queue, self.tile_bucket, self.job_params, self.tile_count = self.backend.join(self.ingest_job_id)
 
         # Set cred time
         self.credential_create_time = datetime.datetime.now()
@@ -187,7 +188,7 @@ class Engine(object):
             raise Exception(msg)
 
         if self.job_status == 0:
-            msg = "Cannot start ingest engine.  Ingest job is not ready yet"
+            msg = "Cannot start ingest engine.  Ingest job is not ready yet."
             logger.error(msg)
             raise Exception(msg)
 
