@@ -16,14 +16,20 @@ import six
 from PIL import Image
 import re
 import os
-from ingest.utils.filesystem import DynamicFilesystem
+from ingest.utils.filesystem import DynamicFilesystemAbsPath
+import h5py
+import numpy as np
 
 from ingest.plugins.path import PathProcessor
 from ingest.plugins.tile import TileProcessor
 
 
-class ZindexStackPathProcessor(PathProcessor):
-    """Class for simple image stacks that only increment in Z, uses the dynamic filesystem utility"""
+class Hdf5TimeSeriesPathProcessor(PathProcessor):
+    """A Path processor for time-series, multi-channel data (e.g. calcium imaging)
+
+    Assumes the data is stored (t,y,z, channel) in individual hdf5 files, with 1 hdf5 file per z-slice
+
+    """
     def __init__(self):
         """Constructor to add custom class var"""
         PathProcessor.__init__(self)
@@ -33,9 +39,7 @@ class ZindexStackPathProcessor(PathProcessor):
         """Set the params
 
         MUST HAVE THE CUSTOM PARAMETERS: "root_dir": "<path_to_stack_root>",
-                                         "extension": "<png|tif|jpg>",
-                                         "filesystem": "<s3|local",
-                                         "bucket": (if s3 filesystem),
+                                         "extension": "hdf5|h5",
                                          "base_filename": the base filename, see below for how this is parsed,
 
         base_filename string identifies how to insert the z-index value into the filename. Identify a place to insert
@@ -57,7 +61,7 @@ class ZindexStackPathProcessor(PathProcessor):
 
     def process(self, x_index, y_index, z_index, t_index=None):
         """
-        Method to compute the file path for the indicated tile
+        Method to compute the file path for the indicated Z-slice
 
         Args:
             x_index(int): The tile index in the X dimension
@@ -69,9 +73,6 @@ class ZindexStackPathProcessor(PathProcessor):
             (str): An absolute file path that contains the specified data
 
         """
-        if t_index != 0:
-            raise IndexError("Z Image Stack only supports non-time series data")
-
         if z_index >= self.parameters["ingest_job"]["extent"]["z"][1]:
             raise IndexError("Z-index out of range")
 
@@ -98,8 +99,12 @@ class ZindexStackPathProcessor(PathProcessor):
         return os.path.join(self.parameters['root_dir'], "{}.{}".format(base_str, self.parameters['extension']))
 
 
-class ZindexStackTileProcessor(TileProcessor):
-    """A Tile processor for a single image file identified by z index"""
+class Hdf5TimeSeriesTileProcessor(TileProcessor):
+    """A Tile processor for time-series, multi-channel data (e.g. calcium imaging)
+
+    Assumes the data is stored (t,y,x, channel) in individual hdf5 files, with 1 hdf5 file per z-slice
+
+    """
 
     def __init__(self):
         """Constructor to add custom class var"""
@@ -113,15 +118,18 @@ class ZindexStackTileProcessor(TileProcessor):
             parameters (dict): Parameters for the dataset to be processed
 
 
-        MUST HAVE THE CUSTOM PARAMETERS: "extension": "<png|tif|jpg>",
-                                         "filesystem": "<s3|local",
+        MUST HAVE THE CUSTOM PARAMETERS: "upload_format": "<png|tif>",
+                                         "channel_index": integer,
+                                         "scale_factor": float,
+                                         "dataset": str,
+                                         "filesystem": "<s3|local>",
                                          "bucket": (if s3 filesystem)
 
         Returns:
             None
         """
         self.parameters = parameters
-        self.fs = DynamicFilesystem(parameters['filesystem'], parameters)
+        self.fs = DynamicFilesystemAbsPath(parameters['filesystem'], parameters)
 
     def process(self, file_path, x_index, y_index, z_index, t_index=0):
         """
@@ -139,19 +147,96 @@ class ZindexStackTileProcessor(TileProcessor):
             (io.BufferedReader): A file handle for the specified tile
 
         """
-        # Load tile
-        file_handle = self.fs.get_file(file_path)
+        file_path = self.fs.get_file(file_path)
 
         x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
                    self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
         y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
                    self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
 
+        # Open hdf5
+        h5_file = h5py.File(file_path, 'r')
+
         # Save sub-img to png and return handle
-        tile_data = Image.open(file_handle)
-        upload_img = tile_data.crop((x_range[0], y_range[0], x_range[1], y_range[1]))
+        tile_data = np.array(h5_file[self.parameters['dataset']][t_index,
+                                                                 y_range[0]:y_range[1],
+                                                                 x_range[0]:x_range[1],
+                                                                 int(self.parameters['channel_index'])])
+
+        tile_data = np.multiply(tile_data, self.parameters['scale_factor'])
+        tile_data = tile_data.astype(np.uint16)
+        upload_img = Image.fromarray(tile_data, 'I;16')
+
         output = six.BytesIO()
-        upload_img.save(output, format=self.parameters["extension"].upper())
+        upload_img.save(output, format=self.parameters["upload_format"].upper())
+
+        # Send handle back
+        return output
+
+
+class Hdf5TimeSeriesLabelTileProcessor(TileProcessor):
+    """A Tile processor for label data packed in a time-series, multi-channel HDF5 (e.g. ROIs for calcium imaging)
+
+    Assumes the data is stored (y,x) in individual hdf5 files, with 1 hdf5 file per z-slice
+
+    """
+
+    def __init__(self):
+        """Constructor to add custom class var"""
+        TileProcessor.__init__(self)
+        self.fs = None
+
+    def setup(self, parameters):
+        """ Method to load the file for uploading
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+
+        MUST HAVE THE CUSTOM PARAMETERS: "upload_format": "<png|tif>",
+                                         "dataset": str,
+                                         "filesystem": "<s3|local>",
+                                         "bucket": (if s3 filesystem)
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+        self.fs = DynamicFilesystemAbsPath(parameters['filesystem'], parameters)
+
+    def process(self, file_path, x_index, y_index, z_index, t_index=0):
+        """
+        Method to load the image file. Can break the image into smaller tiles to help make ingest go smoother, but
+        currently must be perfectly divisible
+
+        Args:
+            file_path(str): An absolute file path for the specified tile
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (io.BufferedReader): A file handle for the specified tile
+
+        """
+        file_path = self.fs.get_file(file_path)
+
+        x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
+                   self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
+        y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
+                   self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
+
+        # Open hdf5
+        h5_file = h5py.File(file_path, 'r')
+
+        # Save sub-img to png and return handle
+        tile_data = np.array(h5_file[self.parameters['dataset']][y_range[0]:y_range[1], x_range[0]:x_range[1]])
+        tile_data = tile_data.astype(np.uint32)
+        upload_img = Image.fromarray(tile_data, 'I')
+
+        output = six.BytesIO()
+        upload_img.save(output, format=self.parameters["upload_format"].upper())
 
         # Send handle back
         return output

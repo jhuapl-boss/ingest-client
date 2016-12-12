@@ -15,7 +15,6 @@ from __future__ import absolute_import
 
 import os
 import unittest
-import json
 from pkg_resources import resource_filename
 
 from PIL import Image
@@ -24,9 +23,7 @@ import numpy as np
 from moto import mock_s3
 import boto3
 
-from ingest.core.config import Configuration
-
-from ingest.utils.filesystem import DynamicFilesystem
+from ingest.utils.filesystem import DynamicFilesystem, DynamicFilesystemAbsPath
 
 
 class TestDynamicFilesystem(unittest.TestCase):
@@ -96,3 +93,71 @@ class TestDynamicFilesystem(unittest.TestCase):
         fs = DynamicFilesystem("s3", self.config_s3)
         for truth, img in zip(self.test_imgs, self.imgs):
             self.file_tests(fs, truth, img)
+
+
+class TestDynamicFilesystemAbsPath(unittest.TestCase):
+    mock_s3 = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.config_local = {"filesystem": "local",
+                            "extension": "png"}
+
+        cls.config_s3 = {"filesystem": "s3",
+                         "extension": "png",
+                         "bucket": "my_bucket"}
+
+        # Set up bucket
+        cls.mock_s3 = mock_s3()
+        cls.mock_s3.start()
+
+        client = boto3.client('s3', region_name="us-east-1")
+        _ = client.create_bucket(ACL='private', Bucket=cls.config_s3["bucket"])
+        waiter = client.get_waiter('bucket_exists')
+        waiter.wait(Bucket=cls.config_s3["bucket"])
+
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(cls.config_s3["bucket"])
+
+        # Put images in S3
+        cls.test_imgs = [os.path.join(resource_filename("ingest", "test/data/example_z_stack"),
+                                      "3253_my_stack_section000.png"),
+                         os.path.join(resource_filename("ingest", "test/data/example_z_stack"),
+                                      "3254_my_stack_section001.png")]
+
+        cls.imgs = ["example_z_stack/3253_my_stack_section000.png",
+                    "example_z_stack/3254_my_stack_section001.png"]
+
+        for key, img in zip(cls.imgs, cls.test_imgs):
+            # put file
+            bucket.upload_file(img, key)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mock_s3.stop()
+
+    def test_local(self):
+        """Test local filesystem"""
+        local_base = os.path.join(resource_filename("ingest", "test/data"))
+        fs = DynamicFilesystemAbsPath("local", self.config_local)
+        for truth, img in zip(self.test_imgs, self.imgs):
+            self.assertEqual(fs.get_file(os.path.join(local_base, img)), truth)
+
+    def test_s3(self):
+        """Test the s3 filesystem"""
+        fs = DynamicFilesystemAbsPath("s3", self.config_s3)
+        tmp_paths = []
+        for img in self.imgs:
+            tmp_path = fs.get_file(img)
+            self.assertEqual(tmp_path, fs.fs.file_map[img])
+            self.assertTrue(os.path.isfile(tmp_path))
+            tmp_paths.append(tmp_path)
+
+        # Delete the instance, so it auto-cleans up temp files.
+        del fs
+
+        # Make sure they are gone.
+        for img in tmp_paths:
+            self.assertFalse(os.path.isfile(img))
+
+

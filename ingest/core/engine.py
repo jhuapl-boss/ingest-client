@@ -32,6 +32,7 @@ class Engine(object):
 
         """
         self.config = None
+        self.msg_wait_iterations = 20  # Each iteration waits for 10 seconds for incoming messages
         self.backend = None
         self.validator = None
         self.tile_processor = None
@@ -181,7 +182,7 @@ class Engine(object):
 
         # Make sure you are joined
         if not self.credentials:
-            msg = "Cannot start ingest engine.  You must first join an ingest job!"
+            msg = "Cannot start ingest engine.  Credentials not successfully received from the ingest service."
             logger.error(msg)
             raise Exception(msg)
 
@@ -215,18 +216,15 @@ class Engine(object):
                     if wait_cnt == 1:
                         sys.stdout.write("Waiting up to 3 minutes for upload tasks to appear.")
                         sys.stdout.flush()
-                        #print("Waiting up to 3 minutes for upload tasks to appear.", end="", flush=True)
                         continue
-                    elif wait_cnt < 20:
+                    elif wait_cnt < self.msg_wait_iterations:
                         sys.stdout.write(".")
                         sys.stdout.flush()
-                        #print(".", end="", flush=True)
                         continue
                     else:
                         break
 
                 wait_cnt = 0
-                # TODO: DMK Verify and update once message format is finalized
                 key_parts = self.backend.decode_tile_key(msg['tile_key'])
                 logger.info("Processing Task -  X:{} Y:{} Z:{} T:{}".format(key_parts["x_index"],
                                                                             key_parts["y_index"],

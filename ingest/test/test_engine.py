@@ -121,6 +121,7 @@ class EngineBossTestMixin(object):
     def test_run(self):
         """Test getting a task from the upload queue"""
         engine = Engine(self.config_file, self.api_token, 23)
+        engine.msg_wait_iterations = 2
 
         # Put some stuff on the task queue
         self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
