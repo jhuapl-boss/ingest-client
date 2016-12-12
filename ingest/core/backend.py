@@ -357,7 +357,7 @@ class BossBackend(Backend):
             else:
                 result = r.json()
                 job_status = int(result['ingest_job']["status"])
-                wp.print("Waiting for ingest job to be created")
+                wp.print_msg("Waiting for ingest job to be created")
                 if job_status == 0:
                     time.sleep(5)
                 else:

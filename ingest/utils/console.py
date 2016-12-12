@@ -8,7 +8,7 @@ class WaitPrinter(object):
         self.first_print = True
         self.wait_char = "."
 
-    def print(self, msg):
+    def print_msg(self, msg):
         """Method to print an initial message"""
         if self.first_print:
             sys.stdout.write("{}{}{}{}".format(msg, self.wait_char, self.wait_char, self.wait_char))
