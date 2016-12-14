@@ -31,6 +31,8 @@ class DynamicFilesystem(object):
 
         if self.filesystem_type == "s3":
             self.fs = S3Filesystem(self.parameters)
+        elif self.filesystem_type == "s3_copy":
+            self.fs = S3CopyTempFilesystem(self.parameters)
         elif self.filesystem_type == "local":
             self.fs = LocalFilesystem(self.parameters)
         else:
@@ -53,7 +55,7 @@ class DynamicFilesystemAbsPath(object):
         self.fs = None
 
         if self.filesystem_type == "s3":
-            self.fs = S3CopyTempFilesystem(self.parameters)
+            self.fs = S3CopyTempFilesystemAbsPath(self.parameters)
         elif self.filesystem_type == "local":
             self.fs = LocalFilesystemAbsPath(self.parameters)
         else:
@@ -145,6 +147,51 @@ class S3Filesystem(BaseFilesystem):
         return output
 
 
+class S3CopyTempFilesystem(BaseFilesystem):
+    """An S3 based filesystem that copies data locally.
+    Useful when chunking big tiles, but must have enough local storage"""
+
+    def __init__(self, parameters):
+        """The S3 filesystem uses boto3 under the hood and assumes you have setup your boto3 credentials properly.
+
+        Required parameters:
+         "bucket": the name of the bucket to use
+
+        Args:
+            parameters(dict): Parameters to configure the S3 filesystem
+        """
+        BaseFilesystem.__init__(self, parameters)
+
+        self.s3 = boto3.resource('s3')
+        self.bucket = self.s3.Bucket(parameters['bucket'])
+        self.file_map = {}
+
+    def __del__(self):
+        """When the class goes out of scope, clean up all temporary files"""
+        for path in self.file_map:
+            os.remove(self.file_map[path])
+
+    def get_file(self, path):
+        """Method to get a file from the "file system"
+
+        Args:
+            path (str): Path to the file to load
+
+        Returns:
+            (io.BufferedReader): A file handle for the specified file
+        """
+        if path in self.file_map:
+            temp_path = self.file_map[path]
+        else:
+            # File currently doesn't exist locally.  Download it
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                self.bucket.download_file(path, tmp.name)
+            self.file_map[path] = tmp.name
+            temp_path = tmp.name
+
+        return open(temp_path, 'rb')
+
+
 # #############################################
 # Path only filesystems
 # #############################################
@@ -198,7 +245,7 @@ class LocalFilesystemAbsPath(BaseFilesystem):
         return path
 
 
-class S3CopyTempFilesystem(BaseFilesystem):
+class S3CopyTempFilesystemAbsPath(BaseFilesystem):
     """A version of an S3 Filesystem that copies files to temp space locally, once, to improve performance"""
 
     def __init__(self, parameters):
