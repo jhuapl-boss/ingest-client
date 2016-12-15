@@ -339,6 +339,7 @@ class Hdf5SliceTileProcessor(TileProcessor):
         MUST HAVE THE CUSTOM PARAMETERS: "upload_format": "<png|tif>",
                                          "data_name": str,
                                          "offset_name": str,
+                                         "extent_name": str,
                                          "offset_origin_x": int,
                                          "offset_origin_y": int,
                                          "filesystem": "<s3|local>",
@@ -368,27 +369,54 @@ class Hdf5SliceTileProcessor(TileProcessor):
         file_path = self.fs.get_file(file_path)
 
         # Compute global range
-        x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
-                   self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
-        y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
-                   self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
+        tile_x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
+                        self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
+        tile_y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
+                        self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
 
         # Open hdf5
         h5_file = h5py.File(file_path, 'r')
 
         # Compute range in actual data, taking offsets into account
-        x_offset = h5_file[self.parameters['offset_name']][1] + self.parameters['offset_origin_x']
-        y_offset = h5_file[self.parameters['offset_name']][0] + self.parameters['offset_origin_x']
+        x_offset = h5_file[self.parameters['offset_name']][1]
+        y_offset = h5_file[self.parameters['offset_name']][0]
+
+        x_img_extent = h5_file[self.parameters['extent_name']][1]
+        y_img_extent = h5_file[self.parameters['extent_name']][0]
+
+        x_frame_offset = x_offset + self.parameters['offset_origin_x']
+        y_frame_offset = y_offset + self.parameters['offset_origin_x']
+
+        x1 = max(tile_x_range[0], x_frame_offset)
+        y1 = max(tile_y_range[0], y_frame_offset)
+        x2 = min(tile_x_range[1], x_frame_offset + x_img_extent)
+        y2 = min(tile_y_range[1], y_frame_offset + y_img_extent)
+
+        if self.parameters['datatype'] == "uint8":
+            datatype = np.uint8
+        elif self.parameters['datatype']== "uint16":
+            datatype = np.uint16
+        else:
+            raise Exception("Unsupported datatype: {}".format(self.parameters['datatype']))
 
         # Allocate Tile
+        tile_data = np.zeros((self.parameters["ingest_job"]["tile_size"]["y"],
+                             self.parameters["ingest_job"]["tile_size"]["x"]),
+                             dtype=datatype, order='C')
 
         # Copy sub-img to tile, save, return
-        tile_data = np.array(h5_file[self.parameters['dataset']][t_index,
-                                                                 y_range[0]:y_range[1],
-                                                                 x_range[0]:x_range[1],
-                                                                 int(self.parameters['channel_index'])])
+        img_y_index_start = max(0, y1 - y_frame_offset)
+        img_y_index_stop = max(0, y2 - y_frame_offset)
 
-        tile_data = tile_data.astype(np.uint8)
+        img_x_index_start = max(0, x1 - x_frame_offset)
+        img_x_index_stop = max(0, x2 - x_frame_offset)
+
+        tile_data[y1-tile_y_range[0]:y2-tile_y_range[0],
+                  x1 - tile_x_range[0]:x2 - tile_x_range[0]] = np.array(h5_file[self.parameters['data_name']][
+                                                                        img_y_index_start:img_y_index_stop,
+                                                                        img_x_index_start:img_x_index_stop])
+
+        tile_data = tile_data.astype(datatype)
         upload_img = Image.fromarray(tile_data)
 
         output = six.BytesIO()
