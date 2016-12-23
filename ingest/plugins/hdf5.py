@@ -159,8 +159,8 @@ class Hdf5TimeSeriesTileProcessor(TileProcessor):
 
         # Save sub-img to png and return handle
         tile_data = np.array(h5_file[self.parameters['dataset']][t_index,
-                                                                 y_range[0]:y_range[1],
                                                                  x_range[0]:x_range[1],
+                                                                 y_range[0]:y_range[1],
                                                                  int(self.parameters['channel_index'])])
 
         tile_data = np.multiply(tile_data, self.parameters['scale_factor'])
@@ -231,7 +231,7 @@ class Hdf5TimeSeriesLabelTileProcessor(TileProcessor):
         h5_file = h5py.File(file_path, 'r')
 
         # Save sub-img to png and return handle
-        tile_data = np.array(h5_file[self.parameters['dataset']][y_range[0]:y_range[1], x_range[0]:x_range[1]])
+        tile_data = np.array(h5_file[self.parameters['dataset']][x_range[0]:x_range[1], y_range[0]:y_range[1]])
         tile_data = tile_data.astype(np.uint32)
         upload_img = Image.fromarray(tile_data, 'I')
 
