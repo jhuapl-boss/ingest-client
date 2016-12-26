@@ -102,7 +102,8 @@ class Hdf5TimeSeriesPathProcessor(PathProcessor):
 class Hdf5TimeSeriesTileProcessor(TileProcessor):
     """A Tile processor for time-series, multi-channel data (e.g. calcium imaging)
 
-    Assumes the data is stored (t,y,x, channel) in individual hdf5 files, with 1 hdf5 file per z-slice
+    Assumes the data is stored (t, x, y, channel) in individual hdf5 files, with 1 hdf5 file per z-slice
+    where x is the column dim and y is the row dim
 
     """
 
@@ -163,6 +164,7 @@ class Hdf5TimeSeriesTileProcessor(TileProcessor):
                                                                  y_range[0]:y_range[1],
                                                                  int(self.parameters['channel_index'])])
 
+        tile_data = np.swapaxes(tile_data, 0, 1)
         tile_data = np.multiply(tile_data, self.parameters['scale_factor'])
         tile_data = tile_data.astype(np.uint16)
         upload_img = Image.fromarray(tile_data, 'I;16')
@@ -177,7 +179,8 @@ class Hdf5TimeSeriesTileProcessor(TileProcessor):
 class Hdf5TimeSeriesLabelTileProcessor(TileProcessor):
     """A Tile processor for label data packed in a time-series, multi-channel HDF5 (e.g. ROIs for calcium imaging)
 
-    Assumes the data is stored (y,x) in individual hdf5 files, with 1 hdf5 file per z-slice
+    Assumes the data is stored (x, y) in individual hdf5 files, with 1 hdf5 file per z-slice
+        where x is the column dim and y is the row dim
 
     """
 
@@ -232,6 +235,7 @@ class Hdf5TimeSeriesLabelTileProcessor(TileProcessor):
 
         # Save sub-img to png and return handle
         tile_data = np.array(h5_file[self.parameters['dataset']][x_range[0]:x_range[1], y_range[0]:y_range[1]])
+        tile_data = np.swapaxes(tile_data, 0, 1)
         tile_data = tile_data.astype(np.uint32)
         upload_img = Image.fromarray(tile_data, 'I')
 
