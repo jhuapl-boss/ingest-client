@@ -15,7 +15,10 @@ from __future__ import absolute_import
 import six
 from PIL import Image
 import numpy as np
+from math import floor
 import os
+import re
+from ingest.utils.filesystem import DynamicFilesystemAbsPath
 
 from .path import PathProcessor
 from .tile import TileProcessor
@@ -153,6 +156,145 @@ class SingleTimeTiffTileProcessor(TileProcessor):
 
         output = six.BytesIO()
         tile_data.save(output, format="TIFF")
+
+        # Send handle back
+        return output
+
+
+class TiffMultiFileHyperStackPathProcessor(PathProcessor):
+    """A Path processor for a hyperstack stored across multiple multi-page TIFF files, with the time dimension split
+    across files"""
+
+    def __init__(self):
+        """Constructor to add custom class var"""
+        PathProcessor.__init__(self)
+        self.regex = None
+
+    def setup(self, parameters):
+        """Set the params
+
+        MUST HAVE THE CUSTOM PARAMETERS: "root_dir": "<path_to_stack_root>",
+                                         "extension": "tiff|tif",
+                                         "base_filename": the base filename, see below for how this is parsed,
+                                         "time_chunk_size": <int>  # The number of time samples in a single file
+
+        base_filename string identifies how to insert the z-index value into the filename. Identify a place to insert
+        the z_index with "<>".  If you want to offset add o:number. If you want to zero pad add p:number"
+
+        my_base_<> -> my_base_0, my_base_1, my_base_2
+        <o:200>_my_base_<p:4> -> 200_my_base_0000, 201_my_base_0001, 202_my_base_0002
+
+        Includes the "ingest_job" section of the config file automatically
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+        self.regex = re.compile('<(o:\d+)?(p:\d+)?>')
+
+    def process(self, x_index, y_index, z_index, t_index=None):
+        """
+        Method to compute the file path for the indicated time sample
+
+        Args:
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (str): An absolute file path that contains the specified data
+
+        """
+        # Create base filename
+        matches = self.regex.findall(self.parameters['base_filename'])
+
+        # Compute file number
+        file_number = int(floor(t_index / int(self.parameters["time_chunk_size"])))
+
+        base_str = self.parameters['base_filename']
+        for m in matches:
+            if m[0]:
+                # there is an offset
+                t_val = int(m[0].split(':')[1]) + file_number
+            else:
+                t_val = file_number
+
+            if m[1]:
+                # There is zero padding
+                t_str = str(t_val).zfill(int(m[1].split(':')[1]))
+            else:
+                t_str = str(t_val)
+
+            base_str = base_str.replace("<{}{}>".format(m[0], m[1]), t_str)
+
+        # prepend root, append extension
+        return os.path.join(self.parameters['root_dir'], "{}.{}".format(base_str, self.parameters['extension']))
+
+
+class TiffMultiFileHyperStackTileProcessor(TileProcessor):
+    """A Tile processor for multi-channel, multi-slice, time-series datasets stored as a hyperstack in a multi-page tiff
+    """
+
+    def __init__(self):
+        """Constructor to add custom class var"""
+        TileProcessor.__init__(self)
+        self.fs = None
+
+    def setup(self, parameters):
+        """ Method to load the file for uploading
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+
+        MUST HAVE THE CUSTOM PARAMETERS: "time_chunk_size": <int>,
+                                         "num_z_slices": <int>,
+                                         "num_channels": <int>,
+                                         "channel_index": <int>,
+                                         "filesystem": "<s3|local>",
+                                         "bucket": (if s3 filesystem)
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+        self.fs = DynamicFilesystemAbsPath(parameters['filesystem'], parameters)
+
+    def process(self, file_path, x_index, y_index, z_index, t_index=0):
+        """
+        Method to load the image file.
+
+        Args:
+            file_path(str): An absolute file path for the specified tile
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (io.BufferedReader): A file handle for the specified tile
+
+        """
+        file_path = self.fs.get_file(file_path)
+
+        # Open Tiff Hyper-Stack
+        tiff_file = Image.open(file_path)
+
+        # Compute frame Number
+        frame_num = ((self.parameters["num_z_slices"] * self.parameters["num_channels"]) * t_index) + \
+                    (z_index * self.parameters["num_channels"]) + (self.parameters["channel_index"])
+
+        tiff_file.seek(frame_num)
+
+        tile_data = np.array(tiff_file, dtype=np.uint16)
+        upload_img = Image.fromarray(tile_data, 'I;16')
+
+        output = six.BytesIO()
+        upload_img.save(output, format="TIFF")
 
         # Send handle back
         return output

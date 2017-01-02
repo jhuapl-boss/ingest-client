@@ -1,0 +1,56 @@
+{
+  "schema": {
+      "name": "boss-v0.1-schema",
+      "validator": "BossValidatorV01"
+  },
+  "client": {
+    "backend": {
+      "name": "boss",
+      "class": "BossBackend",
+      "host": "api.theboss.io",
+      "protocol": "https"
+    },
+    "path_processor": {
+      "class": "ingest.plugins.multipage_tiff.TiffMultiFileHyperStackPathProcessor",
+      "params": {
+        "root_dir": "/data",
+        "extension": "tif",
+        "base_filename": "my_base_<o:200p:4>",
+        "time_chunk_size": 2000
+      }
+    },
+    "tile_processor": {
+      "class": "ingest.plugins.multipage_tiff.TiffMultiFileHyperStackTileProcessor",
+      "params": {
+        "time_chunk_size": 2000,
+        "num_z_slices": 3,
+        "num_channels": 2,
+        "channel_index": 0,
+        "filesystem": "local",
+        "bucket": ""
+      }
+    }
+  },
+  "database": {
+    "collection": "my_col_1",
+    "experiment": "my_exp_1",
+    "channel": "my_ch_1"
+  },
+  "ingest_job": {
+    "resolution": 0,
+    "extent": {
+      "x": [0, 512],
+      "y": [0, 512],
+      "z": [0, 3],
+      "t": [0, 4000]
+    },
+    "tile_size": {
+      "x": 512,
+      "y": 512,
+      "z": 1,
+      "t": 1
+    }
+  }
+}
+
+
