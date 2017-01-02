@@ -288,7 +288,7 @@ class TiffMultiFileHyperStackTileProcessor(TileProcessor):
         frame_num = ((self.parameters["num_z_slices"] * self.parameters["num_channels"]) * t_index) + \
                     (z_index * self.parameters["num_channels"]) + (self.parameters["channel_index"])
 
-        tiff_file.seek(frame_num)
+        tiff_file.seek(frame_num % self.parameters["time_chunk_size"])
 
         tile_data = np.array(tiff_file, dtype=np.uint16)
         upload_img = Image.fromarray(tile_data, 'I;16')
