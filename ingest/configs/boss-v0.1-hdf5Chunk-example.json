@@ -1,0 +1,62 @@
+{
+  "schema": {
+      "name": "boss-v0.1-schema",
+      "validator": "BossValidatorV01"
+  },
+  "client": {
+    "backend": {
+      "name": "boss",
+      "class": "BossBackend",
+      "host": "api.theboss.io",
+      "protocol": "https"
+    },
+    "path_processor": {
+      "class": "ingest.plugins.hdf5.Hdf5ChunkPathProcessor",
+      "params": {
+        "root_dir": "",
+        "extension": "hdf5",
+        "prefix": "test_data",
+        "x_offset": 0,
+        "y_offset": 0,
+        "z_offset": 0,
+        "x_chunk_size": 512,
+        "y_chunk_size": 512,
+        "z_chunk_size": 260,
+        "use_python_convention": true
+      }
+    },
+    "tile_processor": {
+      "class": "ingest.plugins.hdf5.Hdf5ChunkTileProcessor",
+      "params": {
+        "filesystem": "local",
+        "bucket": "",
+        "upload_format": "tiff",
+        "z_chunk_size": 260,
+        "data_name": "img",
+        "datatype": "uint8"
+      }
+    }
+  },
+  "database": {
+    "collection": "my_col_1",
+    "experiment": "my_exp_1",
+    "channel": "my_ch_1"
+  },
+  "ingest_job": {
+    "resolution": 0,
+    "extent": {
+      "x": [0, 1024],
+      "y": [0, 1024],
+      "z": [0, 256],
+      "t": [0, 1]
+    },
+    "tile_size": {
+      "x": 512,
+      "y": 512,
+      "z": 1,
+      "t": 1
+    }
+  }
+}
+
+

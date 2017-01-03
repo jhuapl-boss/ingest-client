@@ -19,6 +19,10 @@ import os
 from ingest.utils.filesystem import DynamicFilesystemAbsPath
 import h5py
 import numpy as np
+from math import floor
+import botocore
+import logging
+
 
 from ingest.plugins.path import PathProcessor
 from ingest.plugins.tile import TileProcessor
@@ -423,6 +427,163 @@ class Hdf5SliceTileProcessor(TileProcessor):
         tile_data = tile_data.astype(datatype)
         upload_img = Image.fromarray(tile_data)
 
+        output = six.BytesIO()
+        upload_img.save(output, format=self.parameters["upload_format"].upper())
+
+        # Send handle back
+        return output
+
+
+class Hdf5ChunkPathProcessor(PathProcessor):
+    """A Path processor for chunks stored in hdf5 files.
+
+    Assumes the data is stored in a dataset and the filename contains the loction. supports an xyz offset
+
+    """
+    def __init__(self):
+        """Constructor to add custom class var"""
+        PathProcessor.__init__(self)
+        self.regex = None
+
+    def setup(self, parameters):
+        """Set the params
+
+        MUST HAVE THE CUSTOM PARAMETERS: "root_dir": "<path_to_stack_root>",
+                                         "extension": "hdf5|h5",
+                                         "prefix": Prefix for the filename
+                                         "x_offset": the offset from 0 in the x dim
+                                         "y_offset": the offset from 0 in the y dim
+                                         "z_offset": the offset from 0 in the z dim
+                                         "x_chunk_size": the chunk extent in the x dimension
+                                         "y_chunk_size": the chunk extent in the y dimension
+                                         "z_chunk_size": the chunk extent in the z dimension
+                                         "use_python_convention" <bool>: a flag indicating if ranges use python convention
+
+        filename format: prefix_xstart-xstop_ystart-ystop_zstart-zstop.h5
+
+        Includes the "ingest_job" section of the config file automatically
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+
+    def process(self, x_index, y_index, z_index, t_index=None):
+        """
+        Method to compute the file path for the indicated Z-slice
+
+        Args:
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (str): An absolute file path that contains the specified data
+
+        """
+        xstart = (x_index * self.parameters['x_chunk_size']) + self.parameters['x_offset']
+        xstop = ((x_index + 1) * self.parameters['x_chunk_size']) + self.parameters['x_offset']
+        if not self.parameters['use_python_convention']:
+            xstop -= 1
+
+        ystart = (y_index * self.parameters['y_chunk_size']) + self.parameters['y_offset']
+        ystop = ((y_index + 1) * self.parameters['y_chunk_size']) + self.parameters['y_offset']
+        if not self.parameters['use_python_convention']:
+            ystop -= 1
+
+        zstart = floor((z_index + self.parameters['z_offset']) / self.parameters['z_chunk_size'])
+        zstop = ((zstart + 1) * self.parameters['z_chunk_size']) + self.parameters['z_offset']
+        if not self.parameters['use_python_convention']:
+            zstop -= 1
+        zstart += self.parameters['z_offset']
+
+        # prepend root, append extension
+        filename = "{}_{}-{}_{}-{}_{}-{}.{}".format(self.parameters['prefix'],
+                                                    xstart, xstop,
+                                                    ystart, ystop,
+                                                    zstart, zstop,
+                                                    self.parameters['extension'])
+        return os.path.join(self.parameters['root_dir'], filename)
+
+
+class Hdf5ChunkTileProcessor(TileProcessor):
+    """A Tile processor for large slices stored in hdf5 files.
+
+    Assumes the data is stored in a dataset and an optional offset is stored in a dataset
+
+    """
+
+    def __init__(self):
+        """Constructor to add custom class var"""
+        TileProcessor.__init__(self)
+        self.fs = None
+
+    def setup(self, parameters):
+        """ Method to load the file for uploading
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+
+        MUST HAVE THE CUSTOM PARAMETERS: "upload_format": "<png|tiff>",
+                                         "data_name": str,
+                                         "z_chunk_size": the chunk extent in the z dimension,
+                                         "filesystem": "<s3|local>",
+                                         "bucket": (if s3 filesystem)
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+        self.fs = DynamicFilesystemAbsPath(parameters['filesystem'], parameters)
+
+    def process(self, file_path, x_index, y_index, z_index, t_index=0):
+        """
+        Method to load the image file.
+
+        Args:
+            file_path(str): An absolute file path for the specified tile
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (io.BufferedReader): A file handle for the specified tile
+
+        """
+        if self.parameters['datatype'] == "uint8":
+            datatype = np.uint8
+        elif self.parameters['datatype'] == "uint16":
+            datatype = np.uint16
+        elif self.parameters['datatype'] == "uint32":
+            datatype = np.uint32
+        else:
+            raise Exception("Unsupported datatype: {}".format(self.parameters['datatype']))
+
+        try:
+            file_path = self.fs.get_file(file_path)
+
+            # Open hdf5
+            h5_file = h5py.File(file_path, 'r')
+
+            # Compute z-index (plugin assumes xy extent fits in a tile)
+            z_index = z_index % self.parameters['z_chunk_size']
+
+            # Allocate Tile
+            tile_data = np.array(h5_file[self.parameters['data_name']][z_index, :, :], dtype=datatype, order='C')
+
+        except botocore.exceptions.ClientError as err:
+            logger = logging.getLogger('ingest-client')
+            logger.info("Could not find chunk. Assuming it's missing and generating blank data.")
+            # TODO: remove kludge once we have contiguous datasets.
+            tile_data = np.zeros((512, 512), dtype=datatype, order="C")
+
+        upload_img = Image.fromarray(tile_data)
         output = six.BytesIO()
         upload_img.save(output, format=self.parameters["upload_format"].upper())
 
