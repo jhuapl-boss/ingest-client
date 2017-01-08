@@ -46,29 +46,53 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog="Visit https://docs.theBoss.io for more details")
 
-    parser.add_argument("--queue_name", "-q",
+    parser.add_argument("queue_name",
+                        help="Name of the ingest SQS queue")
+
+    parser.add_argument("data_dir",
                         default=None,
-                        help="Name of the SQS queue")
-    parser.add_argument("--output_dir", "-o",
-                        default=None,
-                        help="Output Direcotry")
+                        help="Data Directory")
 
     parser.add_argument("--download", "-d",
                         default=None,
                         action="store_true",
                         help="Download all messages in a queue")
 
+    parser.add_argument("--upload", "-u",
+                        default=None,
+                        action="store_true",
+                        help="Upload all messages in a queue")
+
+    parser.add_argument("--invoke", "-i",
+                        default=None,
+                        action="store_true",
+                        help="Trigger lambda invocations to cleanup ingest")
+
+    parser.add_argument("--x_tile_size", "-x",
+                        default=None,
+                        help="X tile size, needed for re-invoking ingest lambdas")
+
+    parser.add_argument("--y_tile_size", "-y",
+                        default=None,
+                        help="y tile size, needed for re-invoking ingest lambdas")
+
     args = parser.parse_args()
+
+    qr = QueueRecovery(args.queue_name)
 
     if args.download:
         # Trying to download
-        if not args.queue_name or not args.output_dir:
-            print("Need queue name and output dir to download messages")
-            sys.exit(0)
-
         print("Downloading messages from {}".format(args.queue_name))
-        qr = QueueRecovery(args.queue_name)
-        qr.simple_store_messages(args.output_dir)
+        qr.simple_store_messages(args.data_dir)
+
+    if args.upload:
+        # Trying to upload
+        print("Uploading messages to {}".format(args.queue_name))
+        qr.restore_messages(args.data_dir)
+
+    if args.invoke:
+        print("Triggering messages in {}".format(args.queue_name))
+        qr.invoke_ingest(args.data_dir, args.x_tile_size, args.y_tile_size)
 
 
 if __name__ == '__main__':

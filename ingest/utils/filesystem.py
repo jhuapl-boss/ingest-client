@@ -263,6 +263,11 @@ class S3CopyTempFilesystemAbsPath(BaseFilesystem):
         self.bucket = self.s3.Bucket(parameters['bucket'])
         self.file_map = {}
 
+        if "temp_dir" in parameters:
+            self.temp_dir = parameters['temp_dir']
+        else:
+            self.temp_dir = None
+
     def __del__(self):
         """When the class goes out of scope, clean up all temporary files"""
         for path in self.file_map:
@@ -281,7 +286,7 @@ class S3CopyTempFilesystemAbsPath(BaseFilesystem):
             return self.file_map[path]
 
         # File currently doesn't exist locally.  Download it
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, dir=self.temp_dir) as tmp:
             self.bucket.download_file(path, tmp.name)
         self.file_map[path] = tmp.name
 

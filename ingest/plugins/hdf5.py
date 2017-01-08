@@ -582,8 +582,180 @@ class Hdf5ChunkTileProcessor(TileProcessor):
             logger.info("Could not find chunk. Assuming it's missing and generating blank data.")
             # TODO: remove kludge once we have contiguous datasets.
             tile_data = np.zeros((512, 512), dtype=datatype, order="C")
+        except OSError as err:
+            logger = logging.getLogger('ingest-client')
+            logger.info("Could not find chunk. Assuming it's missing and generating blank data.")
+            # TODO: remove kludge once we have contiguous datasets.
+            tile_data = np.zeros((512, 512), dtype=datatype, order="C")
 
         upload_img = Image.fromarray(tile_data)
+        output = six.BytesIO()
+        upload_img.save(output, format=self.parameters["upload_format"].upper())
+
+        # Send handle back
+        return output
+
+
+class Hdf5SingleFilePathProcessor(PathProcessor):
+    """A Path processor for 3D datasets stored in a single hdf5 file.
+
+    """
+    def __init__(self):
+        """Constructor to add custom class var"""
+        PathProcessor.__init__(self)
+
+    def setup(self, parameters):
+        """Set the params
+
+        MUST HAVE THE CUSTOM PARAMETERS: "filename": "<path_to_filet>",
+
+        Includes the "ingest_job" section of the config file automatically
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+
+    def process(self, x_index, y_index, z_index, t_index=None):
+        """
+        Method to compute the file path for the indicated Z-slice
+
+        Args:
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (str): An absolute file path that contains the specified data
+
+        """
+        # prepend root, append extension
+        return self.parameters['filename']
+
+
+class Hdf5SingleFileTileProcessor(TileProcessor):
+    """A Tile processor for 3D datasets stored in a single HDF5 file
+
+    Assumes the data is stored in a dataset and an optional offset is stored in a dataset
+
+    """
+
+    def __init__(self):
+        """Constructor to add custom class var"""
+        TileProcessor.__init__(self)
+        self.fs = None
+
+    def setup(self, parameters):
+        """ Method to load the file for uploading
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+
+        MUST HAVE THE CUSTOM PARAMETERS: "upload_format": "<png|tiff>",
+                                         "data_name": str,
+                                         "datatype": <uint8|uint16|uint32>
+                                         "offset_x": int,
+                                         "offset_y": int,
+                                         "offset_z": int,
+                                         "filesystem": "<s3|local>",
+                                         "bucket": (if s3 filesystem)
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+        self.fs = DynamicFilesystemAbsPath(parameters['filesystem'], parameters)
+
+    def process(self, file_path, x_index, y_index, z_index, t_index=0):
+        """
+        Method to load the image file.
+
+        Args:
+            file_path(str): An absolute file path for the specified tile
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (io.BufferedReader): A file handle for the specified tile
+
+        """
+        file_path = self.fs.get_file(file_path)
+
+        # Compute global range
+        target_x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
+                          self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
+        target_y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
+                          self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
+
+        # Open hdf5
+        h5_file = h5py.File(file_path, 'r')
+
+        # Compute range in actual data, taking offsets into account
+        x_offset = self.parameters['offset_x']
+        y_offset = self.parameters['offset_y']
+        x_tile_size = self.parameters["ingest_job"]["tile_size"]["x"]
+        y_tile_size = self.parameters["ingest_job"]["tile_size"]["y"]
+
+        h5_x_range = [target_x_range[0] + x_offset, target_x_range[1] + x_offset]
+        h5_y_range = [target_y_range[0] + y_offset, target_y_range[1] + y_offset]
+        h5_z_slice = z_index + self.parameters['offset_z']
+
+        tile_x_range = [0, x_tile_size]
+        tile_y_range = [0, y_tile_size]
+
+        h5_max_x = h5_file[self.parameters['data_name']].shape[2]
+        h5_max_y = h5_file[self.parameters['data_name']].shape[1]
+
+        if h5_x_range[0] < 0:
+            # insert sub-region into tile
+            tile_x_range = [h5_x_range[0] * -1, x_tile_size]
+            h5_x_range[0] = 0
+        if h5_y_range[0] < 0:
+            # insert sub-region into tile
+            tile_y_range = [h5_y_range[0] * -1, y_tile_size]
+            h5_y_range[0] = 0
+
+        if h5_x_range[1] > h5_max_x:
+            # insert sub-region into tile
+            tile_x_range = [0, x_tile_size - (h5_x_range[1] - h5_max_x)]
+            h5_x_range[1] = h5_max_x
+        if h5_y_range[1] > h5_max_y:
+            # insert sub-region into tile
+            tile_y_range = [0, y_tile_size - (h5_y_range[1] - h5_max_y)]
+            h5_y_range[1] = h5_max_y
+
+        if self.parameters['datatype'] == "uint8":
+            datatype = np.uint8
+        elif self.parameters['datatype']== "uint16":
+            datatype = np.uint16
+        elif self.parameters['datatype']== "uint32":
+            datatype = np.uint32
+        else:
+            raise Exception("Unsupported datatype: {}".format(self.parameters['datatype']))
+
+        # Allocate Tile
+        tile_data = np.zeros((self.parameters["ingest_job"]["tile_size"]["y"],
+                             self.parameters["ingest_job"]["tile_size"]["x"]),
+                             dtype=datatype, order='C')
+
+        if h5_z_slice >= 0:
+            # Copy sub-img to tile, save, return
+            tile_data[tile_y_range[0]:tile_y_range[1],
+                      tile_x_range[0]:tile_x_range[1]] = np.array(h5_file[self.parameters['data_name']][
+                                                                          h5_z_slice,
+                                                                          h5_y_range[0]:h5_y_range[1],
+                                                                          h5_x_range[0]:h5_x_range[1]])
+
+        tile_data = tile_data.astype(datatype)
+        upload_img = Image.fromarray(tile_data)
+
         output = six.BytesIO()
         upload_img.save(output, format=self.parameters["upload_format"].upper())
 

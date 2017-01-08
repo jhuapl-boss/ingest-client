@@ -14,7 +14,7 @@
 import boto3
 import os
 import json
-
+import time
 
 class QueueRecovery(object):
     """Class to manage recovering data from a queue"""
@@ -52,3 +52,46 @@ class QueueRecovery(object):
 
         print("Saved {} messages to {}.".format(cnt, output_dir))
 
+    def restore_messages(self, input_dir):
+        """Method to re-load a backed up messages to an ingest queue"""
+        for msg_file in os.listdir(input_dir):
+            print(msg_file)
+            with open(os.path.join(input_dir, msg_file), "rt") as msg:
+                msg_body = msg.read()
+                response = self.queue.send_message(MessageBody=msg_body)
+                if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
+                    print("failed to upload {}".format(msg_file))
+
+    def invoke_ingest(self, input_dir, x_tile, y_tile):
+        """Method to trigger lambda functions until ingest completes"""
+        # Load a single message to build the object metadata
+        filename = [x for x in os.listdir(input_dir)][0]
+        with open(os.path.join(input_dir, filename), "rt") as msg:
+            metadata = json.load(msg)
+
+        metadata["tile_size_x"] = x_tile
+        metadata["tile_size_y"] = y_tile
+        metadata["lambda-name"] = "ingest"
+
+        # Get how many to invoke
+        starting_message_count = int(self.queue.attributes['ApproximateNumberOfMessages'])
+        num_invocations = range(0, starting_message_count)
+        print("Triggering {} lambdas".format(starting_message_count))
+
+        # Invoke Ingest lambda functions
+        lambda_client = boto3.client('lambda', region_name="us-east-1")
+        cnt = 0
+        for _ in num_invocations:
+            lambda_client.invoke(FunctionName=metadata["parameters"]["ingest_lambda"],
+                                 InvocationType='Event',
+                                 Payload=json.dumps(metadata).encode())
+            cnt += 1
+            if cnt > 30:
+                print("Invoked 30...throttling...")
+                time.sleep(5)
+                cnt = 0
+
+        print("Waiting for 2.5 minutes message timeout to check outcome...")
+        time.sleep(150)
+        print("Started with {} messages. Resulted in {} messages".format(starting_message_count,
+                                                                         self.queue.attributes['ApproximateNumberOfMessages']))
