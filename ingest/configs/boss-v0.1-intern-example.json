@@ -1,0 +1,55 @@
+{
+  "schema": {
+      "name": "boss-v0.1-schema",
+      "validator": "BossValidatorV01"
+  },
+  "client": {
+    "backend": {
+      "name": "boss",
+      "class": "BossBackend",
+      "host": "api.theboss.io",
+      "protocol": "https"
+    },
+    "path_processor": {
+      "class": "ingest.plugins.intern.InternPathProcessor",
+      "params": {
+      }
+    },
+    "tile_processor": {
+      "class": "ingest.plugins.intern.InternTileProcessor",
+      "params": {
+        "x_offset": 0,
+        "y_offset": 0,
+        "z_offset": 0,
+        "x_tile": 1024,
+        "y_tile": 1024,
+        "collection": "col1",
+        "experiment": "exp1",
+        "channel": "ch1",
+        "resolution": 0
+      }
+    }
+  },
+  "database": {
+    "collection": "my_col_1",
+    "experiment": "my_exp_1",
+    "channel": "my_ch_1"
+  },
+  "ingest_job": {
+    "resolution": 0,
+    "extent": {
+      "x": [0, 8192],
+      "y": [0, 8192],
+      "z": [0, 500],
+      "t": [0, 1]
+    },
+    "tile_size": {
+      "x": 1024,
+      "y": 1024,
+      "z": 1,
+      "t": 1
+    }
+  }
+}
+
+
