@@ -18,6 +18,7 @@ import datetime
 import json
 import time
 import sys
+import os
 
 
 class Engine(object):
@@ -99,7 +100,7 @@ class Engine(object):
     def setup(self, log_file=None):
         """Method to setup the Engine by finishing configuring subclasses and validating the schema"""
         if not log_file:
-            log_file = 'ingest_log{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+            log_file = 'ingest_log{}_pid{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), os.getpid())
 
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s %(levelname)-8s %(message)s',
@@ -157,7 +158,7 @@ class Engine(object):
         self.credential_create_time = datetime.datetime.now()
 
         logger = logging.getLogger('ingest-client')
-        logger.info("JOINED INGEST JOB: {}".format(self.ingest_job_id))
+        logger.info("(pid={}) JOINED INGEST JOB: {}".format(os.getpid(), self.ingest_job_id))
 
     def cancel(self):
         """
@@ -183,17 +184,17 @@ class Engine(object):
 
         # Make sure you are joined
         if not self.credentials:
-            msg = "Cannot start ingest engine.  Credentials not successfully received from the ingest service."
+            msg = "(pid={}) Cannot start ingest engine.  Credentials not successfully received from the ingest service.".format(os.getpid())
             logger.error(msg)
             raise Exception(msg)
 
         if self.job_status == 0:
-            msg = "Cannot start ingest engine.  Ingest job is not ready yet."
+            msg = "(pid={}) Cannot start ingest engine.  Ingest job is not ready yet.".format(os.getpid())
             logger.error(msg)
             raise Exception(msg)
 
         if self.job_status == 2:
-            msg = "Ingest job already completed. Skipping ingest engine start."
+            msg = "(pid={}) Ingest job already completed. Skipping ingest engine start.".format(os.getpid())
             logger.info(msg)
             raise Exception(msg)
 
@@ -201,95 +202,72 @@ class Engine(object):
         exiting = False
         wait_cnt = 0
         while True:
-            try:
-                # Check if you need to renew credentials
-                if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
-                    print("Renewing Credentials")
-                    logger.info("Renewing Credentials")
-                    self.join()
+            # Check if you need to renew credentials
+            if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
+                print("Renewing Credentials")
+                logger.info("Renewing Credentials")
+                self.join()
 
-                # Get a task
-                message_id, receipt_handle, msg = self.backend.get_task()
+            # Get a task
+            message_id, receipt_handle, msg = self.backend.get_task()
 
-                if not msg:
-                    time.sleep(10)
-                    wait_cnt += 1
-                    if wait_cnt == 1:
-                        sys.stdout.write("Waiting up to 3 minutes for upload tasks to appear.")
-                        sys.stdout.flush()
-                        continue
-                    elif wait_cnt < self.msg_wait_iterations:
-                        sys.stdout.write(".")
-                        sys.stdout.flush()
-                        continue
-                    else:
-                        break
-
-                wait_cnt = 0
-                key_parts = self.backend.decode_tile_key(msg['tile_key'])
-                logger.info("Processing Task -  X:{} Y:{} Z:{} T:{}".format(key_parts["x_index"],
-                                                                            key_parts["y_index"],
-                                                                            key_parts["z_index"],
-                                                                            key_parts["t_index"]))
-
-                # Call path processor
-                filename = self.path_processor.process(key_parts["x_index"],
-                                                       key_parts["y_index"],
-                                                       key_parts["z_index"],
-                                                       key_parts["t_index"])
-
-                # Call tile processor
-                handle = self.tile_processor.process(filename,
-                                                     key_parts["x_index"],
-                                                     key_parts["y_index"],
-                                                     key_parts["z_index"],
-                                                     key_parts["t_index"])
-
-                try:
-                    metadata = {'chunk_key': msg['chunk_key'],
-                                'ingest_job': self.ingest_job_id,
-                                'parameters': self.job_params,
-                                }
-                    handle.seek(0)
-                    response = self.backend.bucket.put_object(ACL='private',
-                                                              Body=handle,
-                                                              Key=msg['tile_key'],
-                                                              Metadata={
-                                                                  'message_id': message_id,
-                                                                  'receipt_handle': receipt_handle,
-                                                                  'metadata': json.dumps(metadata)
-                                                              },
-                                                              StorageClass='STANDARD')
-                    logger.info("Successfully wrote file: {}".format(response.key))
-
-                except Exception as e:
-                    logger.error("Upload Failed -  X:{} Y:{} Z:{} T:{} - {}".format(key_parts["x_index"],
-                                                                                    key_parts["y_index"],
-                                                                                    key_parts["z_index"],
-                                                                                    key_parts["t_index"],
-                                                                                    e))
-
-            except KeyboardInterrupt:
-                # Make sure they want to stop this client
-                quit_run = False
-                while True:
-                    quit_uploading = input("Are you sure you want to quit uploading? (y/n)")
-                    if quit_uploading.lower() == "y":
-                        quit_run = True
-                        break
-                    elif quit_uploading.lower() == "n":
-                        print("Continuing...")
-                        break
-                    else:
-                        print("Enter 'y' or 'n' for 'yes' or 'no'")
-
-                if quit_run:
-                    print("Stopping upload engine.")
-                    exiting = True
+            if not msg:
+                time.sleep(10)
+                wait_cnt += 1
+                if wait_cnt == 1:
+                    sys.stdout.write("(pid={}) Waiting up to 3 minutes for upload tasks to appear.".format(os.getpid()))
+                    sys.stdout.flush()
+                    continue
+                elif wait_cnt < self.msg_wait_iterations:
+                    sys.stdout.write(".")
+                    sys.stdout.flush()
+                    continue
+                else:
                     break
 
-        if not exiting:
-            logger.info("No more tasks remaining.")
+            wait_cnt = 0
+            key_parts = self.backend.decode_tile_key(msg['tile_key'])
+            logger.info("(pid={}) Processing Task -  X:{} Y:{} Z:{} T:{}".format(os.getpid(),
+                                                                                 key_parts["x_index"],
+                                                                                 key_parts["y_index"],
+                                                                                 key_parts["z_index"],
+                                                                                 key_parts["t_index"]))
 
+            # Call path processor
+            filename = self.path_processor.process(key_parts["x_index"],
+                                                   key_parts["y_index"],
+                                                   key_parts["z_index"],
+                                                   key_parts["t_index"])
 
+            # Call tile processor
+            handle = self.tile_processor.process(filename,
+                                                 key_parts["x_index"],
+                                                 key_parts["y_index"],
+                                                 key_parts["z_index"],
+                                                 key_parts["t_index"])
+
+            try:
+                metadata = {'chunk_key': msg['chunk_key'],
+                            'ingest_job': self.ingest_job_id,
+                            'parameters': self.job_params,
+                            }
+                handle.seek(0)
+                response = self.backend.bucket.put_object(ACL='private',
+                                                          Body=handle,
+                                                          Key=msg['tile_key'],
+                                                          Metadata={
+                                                              'message_id': message_id,
+                                                              'receipt_handle': receipt_handle,
+                                                              'metadata': json.dumps(metadata)
+                                                          },
+                                                          StorageClass='STANDARD')
+                logger.info("(pid={}) Successfully wrote file: {}".format(os.getpid(), response.key))
+
+            except Exception as e:
+                logger.error("(pid={}) Upload Failed -  X:{} Y:{} Z:{} T:{} - {}".format(os.getpid(),
+                                                                                         key_parts["x_index"],
+                                                                                         key_parts["y_index"],
+                                                                                         key_parts["z_index"],
+                                                                                         key_parts["t_index"],
+                                                                                         e))
 

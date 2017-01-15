@@ -16,6 +16,9 @@ from ingest.core.config import ConfigFileError
 from six.moves import input
 import argparse
 import sys
+import multiprocessing as mp
+import os
+import time
 
 
 def get_confirmation(prompt):
@@ -41,6 +44,41 @@ def get_confirmation(prompt):
 
     return decision
 
+def worker_process_run(config_file, api_token, job_id, pipe):
+    """A worker process main execution function. Generates an engine, and joins the job
+       (that was either created by the main process or joined by it).
+       Ends when no more tasks are left that can be executed.
+
+    Args:
+        config_file(str): the path to the configuration file to initialize the engine with.
+        api_token(str): the token to initialize the engine with.
+        job_id(int): the id of the job the engine needs to join with.
+        pipe(multiprocessing.Pipe): the receiving end of the pipe that communicates with the master process.
+    """
+
+    print("Creating new worker process, pid={}.".format(os.getpid()))
+    # Create the engine
+    try:
+        engine = Engine(config_file, api_token, job_id)
+    except ConfigFileError as err:
+        print("ERROR (pid: {}): {}".format(os.getpid(), err))
+        sys.exit(1)
+
+    # Join job
+    engine.join()
+
+    # Start it up!
+    should_run = True
+    while should_run:
+        try:
+            engine.run()
+            # run will end if no more jobs are available
+            should_run = False
+        except KeyboardInterrupt:
+            # Make sure they want to stop this client, wait for the main process to send the next step
+            should_run = pipe.recv()
+    print("Process pid={} finished gracefully.".format(os.getpid()))
+    
 
 def main():
     parser = argparse.ArgumentParser(description="Client for facilitating large-scale data ingest",
@@ -60,6 +98,9 @@ def main():
                         action="store_true",
                         default=None,
                         help="Flag indicating if you'd like to cancel (and remove) an ingest job. This will not delete data already ingested, but will prevent continuing this ingest job.")
+    parser.add_argument("--processes_nb", "-p", type=int,
+                        default=1,
+                        help="The number of client processes that will upload the images of the ingest job.")
     parser.add_argument("config_file", help="Path to the ingest job configuration file")
 
     args = parser.parse_args()
@@ -132,8 +173,52 @@ def main():
         # Join job
         engine.join()
 
+    # Create worker processes if necessary
+    workers = []
+    for i in range(args.processes_nb - 1):
+        new_pipe = mp.Pipe(False)
+        new_process = mp.Process(target=worker_process_run, args=(args.config_file, args.api_token, engine.ingest_job_id, new_pipe[0]))
+        workers.append((new_process, new_pipe[1]))
+        new_process.start()
+
     # Start it up!
-    engine.run()
+    start_time = time.time()
+    should_run = True
+    while should_run:
+        try:
+            engine.run()
+            # run will end if no more jobs are available, join other processes
+            should_run = False
+        except KeyboardInterrupt:
+            # Make sure they want to stop this client
+            quit_run = False
+            while True:
+                quit_uploading = input("Are you sure you want to quit uploading? (y/n)")
+                if quit_uploading.lower() == "y":
+                    quit_run = True
+                    break
+                elif quit_uploading.lower() == "n":
+                    print("Continuing...")
+                    break
+                else:
+                    print("Enter 'y' or 'n' for 'yes' or 'no'")
+
+            # notify the worker processes if they should stop execution
+            for _, worker_pipe in workers:
+                worker_pipe.send(quit_uploading.lower() == "n")
+
+            if quit_run:
+                print("Stopping upload engine.")
+                should_run = False
+                break
+        
+    print("Waiting for worker processes.")
+    for worker_process, worker_pipe in workers:
+        worker_process.join()
+        worker_pipe.close()
+
+    print("No more tasks remaining.")
+    print("Upload finished after {} seconds.".format(time.time() - start_time))
 
 
 if __name__ == '__main__':
