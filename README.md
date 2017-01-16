@@ -127,15 +127,19 @@ There are three operations you can perform with the ingest client - Create, Join
 	-	Sometimes you may want to stop an ingest job.  You can do this by "cancelling" it.  Currently this will delete all tiles that have been uploaded but not ingested into the Boss yet.  Any data that made its way through the ingest pipeline will remain.  Also temporary queues will be purged and deleted.
 
 		```
-		python client.py <absolute_path_to_config_file> --cancel <ingest_job_id>
+		python client.py --cancel --job-id <ingest_job_id>
 		```
 		or
 		
 		```
-		python client.py <absolute_path_to_config_file> -c <ingest_job_id>
+		python client.py -c -j <ingest_job_id>
 		```
  
-
+        If you are working with the non-production Boss instance (api.theboss.io), than you can provide a configuration file specifying the desired host. 
+		
+		```
+		python client.py <absolute_path_to_config_file> -c -j <ingest_job_id>
+		```
 
 
 ## Plugins

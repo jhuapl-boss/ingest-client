@@ -399,7 +399,7 @@ class BossBackend(Backend):
                             headers=self.api_headers, verify=self.validate_ssl)
 
         if r.status_code != 204:
-            raise Exception("Failed to join ingest job.")
+            raise Exception("Failed to cancel ingest job.")
 
     def get_task(self, num_messages=1):
         """

@@ -17,6 +17,8 @@ from six.moves import input
 import argparse
 import sys
 
+from ingest.core.backend import BossBackend
+
 
 def get_confirmation(prompt):
     """Method to confirm decisions
@@ -60,15 +62,41 @@ def main():
                         action="store_true",
                         default=None,
                         help="Flag indicating if you'd like to cancel (and remove) an ingest job. This will not delete data already ingested, but will prevent continuing this ingest job.")
-    parser.add_argument("config_file", help="Path to the ingest job configuration file")
+    parser.add_argument("config_file", nargs='?', help="Path to the ingest job configuration file")
 
     args = parser.parse_args()
 
     # Make sure you have a config file
     if args.config_file is None:
-        parser.print_usage()
-        print("Error: Ingest Job Configuration File is required")
-        sys.exit(1)
+        if args.cancel:
+            # If no config is provided and you are deleting, the client defaults to the production Boss stack
+            boss_backend_params = {"client": {
+                "backend": {
+                    "name": "boss",
+                    "class": "BossBackend",
+                    "host": "api.theboss.io",
+                    "protocol": "https"}}}
+            backend = BossBackend(boss_backend_params)
+            backend.setup(args.api_token)
+
+            # Trying to cancel
+            if args.job_id is None:
+                parser.print_usage()
+                print("Error: You must provide an ingest job ID to cancel")
+                sys.exit(1)
+
+            if not get_confirmation("Are you sure you want to cancel ingest job {}? ".format(args.job_id)):
+                print("Command ignored. Job not cancelled")
+                sys.exit(0)
+
+            backend.cancel(args.job_id)
+            print("Ingest job {} successfully cancelled.".format(args.job_id))
+            sys.exit(0)
+        else:
+            # Not deleting, so you need a config file
+            parser.print_usage()
+            print("Error: Ingest Job Configuration File is required")
+            sys.exit(1)
 
     # Create an engine instance
     try:
