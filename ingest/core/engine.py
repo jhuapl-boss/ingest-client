@@ -19,6 +19,7 @@ import json
 import time
 import sys
 import os
+from math import floor
 
 
 class Engine(object):
@@ -199,7 +200,6 @@ class Engine(object):
             raise Exception(msg)
 
         # Do some work
-        exiting = False
         wait_cnt = 0
         while True:
             # Check if you need to renew credentials
@@ -214,13 +214,14 @@ class Engine(object):
             if not msg:
                 time.sleep(10)
                 wait_cnt += 1
-                if wait_cnt == 1:
-                    sys.stdout.write("(pid={}) Waiting up to 3 minutes for upload tasks to appear.".format(os.getpid()))
-                    sys.stdout.flush()
-                    continue
-                elif wait_cnt < self.msg_wait_iterations:
-                    sys.stdout.write(".")
-                    sys.stdout.flush()
+                if wait_cnt < self.msg_wait_iterations:
+                    # Compute time
+                    wait_min = int(floor((10 * wait_cnt) / 60))
+                    wait_sec = int((10 * wait_cnt) % 60)
+
+                    print("(pid={}) Waited {} min {} sec of 3 minutes for upload tasks to appear...".format(os.getpid(),
+                                                                                                            wait_min,
+                                                                                                            wait_sec))
                     continue
                 else:
                     break

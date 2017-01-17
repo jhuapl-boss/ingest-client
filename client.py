@@ -46,6 +46,7 @@ def get_confirmation(prompt):
 
     return decision
 
+
 def worker_process_run(config_file, api_token, job_id, pipe):
     """A worker process main execution function. Generates an engine, and joins the job
        (that was either created by the main process or joined by it).
@@ -79,7 +80,7 @@ def worker_process_run(config_file, api_token, job_id, pipe):
         except KeyboardInterrupt:
             # Make sure they want to stop this client, wait for the main process to send the next step
             should_run = pipe.recv()
-    print("Process pid={} finished gracefully.".format(os.getpid()))
+    print("  - Process pid={} finished gracefully.".format(os.getpid()))
     
 
 def main():
@@ -205,11 +206,12 @@ def main():
     workers = []
     for i in range(args.processes_nb - 1):
         new_pipe = mp.Pipe(False)
-        new_process = mp.Process(target=worker_process_run, args=(args.config_file, args.api_token, engine.ingest_job_id, new_pipe[0]))
+        new_process = mp.Process(target=worker_process_run, args=(args.config_file, args.api_token,
+                                                                  engine.ingest_job_id, new_pipe[0]))
         workers.append((new_process, new_pipe[1]))
         new_process.start()
 
-    # Start it up!
+    # Start the main process engine
     start_time = time.time()
     should_run = True
     while should_run:
@@ -219,11 +221,11 @@ def main():
             should_run = False
         except KeyboardInterrupt:
             # Make sure they want to stop this client
-            quit_run = False
             while True:
                 quit_uploading = input("Are you sure you want to quit uploading? (y/n)")
                 if quit_uploading.lower() == "y":
-                    quit_run = True
+                    print("Stopping upload engine.")
+                    should_run = False
                     break
                 elif quit_uploading.lower() == "n":
                     print("Continuing...")
@@ -231,16 +233,12 @@ def main():
                 else:
                     print("Enter 'y' or 'n' for 'yes' or 'no'")
 
-            # notify the worker processes if they should stop execution
+            # notify the worker processes that they should stop execution
             for _, worker_pipe in workers:
-                worker_pipe.send(quit_uploading.lower() == "n")
-
-            if quit_run:
-                print("Stopping upload engine.")
-                should_run = False
-                break
+                worker_pipe.send(should_run)
         
-    print("Waiting for worker processes.")
+    print("Waiting for worker processes to close...")
+    time.sleep(1)  # Make sure workers have cleaned up
     for worker_process, worker_pipe in workers:
         worker_process.join()
         worker_pipe.close()

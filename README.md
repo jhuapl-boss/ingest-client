@@ -74,7 +74,7 @@ You must provide the ingest client with your Boss API token so it can make authe
 
 Also remember that you must have write permissions to the resource (`collection`, `experiment`, and `channel`) where data is to be written, as specified in the ingest job configuration file. If you created the resources you will automatically have access.
 
-There are three ways to provide your API token to the ingest client.  The ingest client will try to use the first token it finds in the following order:
+There are four ways to provide your API token to the ingest client.  The ingest client will try to use the first token it finds in the following order:
 
 1. **Via command line arguments**
 	- You can directly pass your token to the ingest client when starting it from the command line. See the *Usage* section below.
@@ -85,14 +85,19 @@ There are three ways to provide your API token to the ingest client.  The ingest
 		```
 		cp ./token.json.example ./token.json 
 		```
-	- Get your API token.  Currently this can be done by visiting the [temporary token page](https://api.theboss.io/token). This will be replaced in the future with the Boss Management Console
-	
+	- Get your API token.  This can be done by visiting the [Boss Management Console](https://api.theboss.io). After logging in, click on your username in the top right corner, then "API Token".
 	
 	- Copy your API token to the token.json file, replacing `<insert_token_here>`
 
-3. **Via the ndio configuration file**
-	- If you have already installed [ndio](https://github.com/jhuapl-boss/ndio) and added your API token to its configuration file, the ingest client will automatically load the token
+3. **Via the intern configuration file**
+	- If you have already installed [intern](https://github.com/jhuapl-boss/intern) and added your API token to its configuration file, the ingest client will automatically load the token
+
+4. **Via the intern environment variables**
+	- The ingest client can also reuse environment variables used to configure _intern_ to set your API token
 	
+	```
+	  export INTERN_TOKEN=gjwb837js823gd9819ba18894mf94949ecc45
+	```
 
 ## Usage
 
@@ -102,14 +107,16 @@ There are three operations you can perform with the ingest client - Create, Join
 
 - **Creating a NEW Ingest Job**
 	- Populate an ingest job configuration file to specify the correct plugins for your data, the Boss resource to use, the extent of the dataset to be ingested, and the tile size.
-	- Refer to the [Creating Configuration Files](https://github.com/jhuapl-boss/ingest-client/wiki/Creating-Ingest-Job-Configuration-Files) wiki page for more detail on how to do this.
+	- Refer to the [Creating Configuration Files](https://github.com/jhuapl-boss/ingest-client/wiki/Creating-Ingest-Job-Configuration-Files) wiki page for more detail on how to do this. Also, currently a helper script can be found [here](https://github.com/jhuapl-boss/demos/tree/master/ingest_helpers), that will eventually be pulled into the client.
 
 	- Assuming you have created a file, simply call the ingest client
 	 
 		```
 		python client.py <absolute_path_to_config_file>
 		```
-	- After creating the new Ingest Job, the client will print the ingest job ID and it will be also logged.  **Remember this ID** if you wish to restart the client or run the client on additional nodes for increased throughput
+	- After creating the new Ingest Job, the client will print the ingest job ID and it will be also logged.  
+
+**Remember this ID if you wish to restart the client or run the client on additional nodes for increased throughput**
 	
 - **Joining an EXISTING Ingest Job**
 	- You can join an existing ingest job and start uploading data any time after it has been created. This can be useful if the client has crashed, or if you want to run the client on additional nodes in parallel.
@@ -124,7 +131,7 @@ There are three operations you can perform with the ingest client - Create, Join
 		```
 
 - **Cancelling an Ingest Job**
-	-	Sometimes you may want to stop an ingest job.  You can do this by "cancelling" it.  Currently this will delete all tiles that have been uploaded but not ingested into the Boss yet.  Any data that made its way through the ingest pipeline will remain.  Also temporary queues will be purged and deleted.
+	-	Sometimes you may want to stop an ingest job. You can do this by "cancelling" it.  Currently this will delete all tiles that have been uploaded but not ingested into the Boss yet.  Any data that made its way through the ingest pipeline will remain.  Also temporary queues will be purged and deleted.
 
 		```
 		python client.py --cancel --job-id <ingest_job_id>
@@ -135,11 +142,24 @@ There are three operations you can perform with the ingest client - Create, Join
 		python client.py -c -j <ingest_job_id>
 		```
  
-        If you are working with the non-production Boss instance (api.theboss.io), than you can provide a configuration file specifying the desired host. 
+        If you are working with the non-production Boss instance (api.theboss.io), then you can provide a configuration file specifying the desired host as the commands shown above will default to the production Boss environment. 
 		
 		```
 		python client.py <absolute_path_to_config_file> -c -j <ingest_job_id>
 		```
+
+- **Multiprocessing**
+	-   You can choose to have multiple upload engines start in parallel processes by setting the `-p` argument as outlined in the example below. (Default number of upload processes = 1)
+
+		```
+		python client.py <absolute_path_to_config_file> --processes_nb <number_of_processes>
+		```
+		or
+		
+		```
+		python client.py <absolute_path_to_config_file> -p <number_of_processes>
+		```
+
 
 
 ## Plugins
