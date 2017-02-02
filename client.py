@@ -13,12 +13,16 @@
 # limitations under the License.
 from ingest.core.engine import Engine
 from ingest.core.config import ConfigFileError
+from pkg_resources import resource_filename
 from six.moves import input
+import datetime
 import argparse
 import sys
 import multiprocessing as mp
 import os
 import time
+import logging
+from ingest.utils.log import always_log_info
 
 from ingest.core.backend import BossBackend
 
@@ -59,7 +63,7 @@ def worker_process_run(config_file, api_token, job_id, pipe):
         pipe(multiprocessing.Pipe): the receiving end of the pipe that communicates with the master process.
     """
 
-    print("Creating new worker process, pid={}.".format(os.getpid()))
+    always_log_info("Creating new worker process, pid={}.".format(os.getpid()))
     # Create the engine
     try:
         engine = Engine(config_file, api_token, job_id)
@@ -80,7 +84,7 @@ def worker_process_run(config_file, api_token, job_id, pipe):
         except KeyboardInterrupt:
             # Make sure they want to stop this client, wait for the main process to send the next step
             should_run = pipe.recv()
-    print("  - Process pid={} finished gracefully.".format(os.getpid()))
+    always_log_info("  - Process pid={} finished gracefully.".format(os.getpid()))
     
 
 def main():
@@ -97,6 +101,9 @@ def main():
     parser.add_argument("--log-file", "-l",
                         default=None,
                         help="Absolute path to the logfile to use")
+    parser.add_argument("--log-level", "-v",
+                        default="warning",
+                        help="Log level to use: critical, error, warning, info, debug")
     parser.add_argument("--cancel", "-c",
                         action="store_true",
                         default=None,
@@ -140,6 +147,19 @@ def main():
             print("Error: Ingest Job Configuration File is required")
             sys.exit(1)
 
+    # Setup logging
+    level = logging.getLevelName(args.log_level.upper())
+    if not args.log_file:
+        # Using default log path
+        log_file = os.path.join(resource_filename('ingest', 'logs'),
+                                'ingest_log{}_pid{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                                                os.getpid()))
+        # Make sure the logs dir exists if using the default log path
+        if not os.path.exists(resource_filename('ingest', 'logs')):
+            os.makedirs(resource_filename('ingest', 'logs'))
+    else:
+        log_file = args.log_file
+
     # Create an engine instance
     try:
         engine = Engine(args.config_file, args.api_token, args.job_id)
@@ -158,8 +178,9 @@ def main():
             print("Command ignored. Job not cancelled")
             sys.exit(0)
 
+        always_log_info("Attempting to cancel Ingest Job {}.".format(args.job_id))
         engine.cancel()
-        print("Ingest job {} successfully cancelled.".format(args.job_id))
+        always_log_info("Ingest job {} successfully cancelled.".format(args.job_id))
         sys.exit(0)
 
     else:
@@ -168,17 +189,17 @@ def main():
             # Creating a new session - make sure the user wants to do this.
             if not get_confirmation("Would you like to create a NEW ingest job?"):
                 # Don't want to create a new job
-                print("Ingest job cancelled")
+                print("Exiting")
                 sys.exit(0)
         else:
             # Resuming a session - make sure the user wants to do this.
             if not get_confirmation("Are you sure you want to resume ingest job {}?".format(args.job_id)):
                 # Don't want to resume
-                print("Ingest job cancelled")
+                print("Exiting")
                 sys.exit(0)
 
     # Setup engine instance.  Prompt user to confirm things if needed
-    question_msgs = engine.setup(args.log_file)
+    question_msgs = engine.setup(log_file, level)
     if question_msgs:
         for msg in question_msgs:
             if not get_confirmation(msg):
@@ -188,8 +209,8 @@ def main():
     if args.job_id is None:
         # Create job
         engine.create_job()
-        print("Successfully Created Ingest Job ID: {}".format(engine.ingest_job_id))
-        print("Note: You need this ID to continue this job later!")
+        always_log_info("Successfully Created Ingest Job ID: {}".format(engine.ingest_job_id))
+        always_log_info("Note: You need this ID to continue this job later!")
 
         if not get_confirmation("Do you want to start uploading now?"):
             print("OK - Your job is ready and waiting for you. You can resume by providing Ingest Job ID '{}' to the client".format(engine.ingest_job_id))
@@ -214,17 +235,19 @@ def main():
     # Start the main process engine
     start_time = time.time()
     should_run = True
+    job_complete = False
     while should_run:
         try:
             engine.run()
             # run will end if no more jobs are available, join other processes
             should_run = False
+            job_complete = True
         except KeyboardInterrupt:
             # Make sure they want to stop this client
             while True:
                 quit_uploading = input("Are you sure you want to quit uploading? (y/n)")
                 if quit_uploading.lower() == "y":
-                    print("Stopping upload engine.")
+                    always_log_info("Stopping upload engine.")
                     should_run = False
                     break
                 elif quit_uploading.lower() == "n":
@@ -236,15 +259,19 @@ def main():
             # notify the worker processes that they should stop execution
             for _, worker_pipe in workers:
                 worker_pipe.send(should_run)
-        
-    print("Waiting for worker processes to close...")
+
+    always_log_info("Waiting for worker processes to close...")
     time.sleep(1)  # Make sure workers have cleaned up
     for worker_process, worker_pipe in workers:
         worker_process.join()
         worker_pipe.close()
 
-    print("No more tasks remaining.")
-    print("Upload finished after {} seconds.".format(time.time() - start_time))
+    if job_complete:
+        always_log_info("Job Complete - No more tasks remaining.")
+        always_log_info("Upload finished after {} minutes.".format((time.time() - start_time) / 60))
+    else:
+        always_log_info("Client exiting")
+        always_log_info("Run time: {} minutes.".format((time.time() - start_time) / 60))
 
 
 if __name__ == '__main__':

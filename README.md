@@ -160,6 +160,30 @@ There are three operations you can perform with the ingest client - Create, Join
 		python client.py <absolute_path_to_config_file> -p <number_of_processes>
 		```
 
+- **Logging**
+	-   You can choose where to write the log file by specifying and absolute file path suing the -l parameter. If ommitted, data is logged in `<package_root>/logs`
+
+		```
+		python client.py <absolute_path_to_config_file> --log-file <absolute_filename>
+		```
+		or
+		
+		```
+		python client.py <absolute_path_to_config_file> -l <absolute_filename>
+		```
+
+	-   You can also control the logging level. By default it is set to `WARNING`, although some important information is forced to always log. The `INFO` level and lower result in very large log files and is not recommended for anything besides development and debug.
+
+		```
+		python client.py <absolute_path_to_config_file> --log-level <critical|error|warning|info|debug>
+		```
+		or
+		
+		```
+		python client.py <absolute_path_to_config_file> -v <critical|error|warning|info|debug>
+
+		```
+
 
 
 ## Plugins

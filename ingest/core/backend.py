@@ -23,7 +23,8 @@ import botocore
 from pkg_resources import resource_filename
 import os
 
-from ingest.utils import WaitPrinter
+from ..utils import WaitPrinter
+from ..utils.log import always_log_info
 
 
 @six.add_metaclass(ABCMeta)
@@ -317,7 +318,7 @@ class BossBackend(Backend):
 
 
         """
-        print("Submitting ingest job configuration for creation...")
+        always_log_info("Submitting ingest job configuration for creation...")
         r = requests.post('{}/{}/ingest/'.format(self.host, self.api_version), json=config_dict,
                           headers=self.api_headers, verify=self.validate_ssl)
 
@@ -362,6 +363,7 @@ class BossBackend(Backend):
                     time.sleep(5)
                 else:
                     wp.finished()
+                    always_log_info("Ingest Job ready for uploading")
 
                     creds = result["credentials"]
                     queue = result["ingest_job"]["upload_queue"]

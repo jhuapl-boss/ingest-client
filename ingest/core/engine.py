@@ -17,7 +17,7 @@ import logging
 import datetime
 import json
 import time
-import sys
+from ..utils.log import always_log_info
 import os
 from math import floor
 
@@ -98,12 +98,12 @@ class Engine(object):
         self.path_processor = self.config.path_processor_class
         self.path_processor.setup(self.config.get_path_processor_params())
 
-    def setup(self, log_file=None):
+    def setup(self, log_file=None, log_level=logging.WARNING):
         """Method to setup the Engine by finishing configuring subclasses and validating the schema"""
         if not log_file:
             log_file = 'ingest_log{}_pid{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), os.getpid())
 
-        logging.basicConfig(level=logging.INFO,
+        logging.basicConfig(level=log_level,
                             format='%(asctime)s %(levelname)-8s %(message)s',
                             datefmt='%m-%d %H:%M',
                             filename=log_file,
@@ -136,8 +136,7 @@ class Engine(object):
         """
         self.ingest_job_id = self.backend.create(self.config.config_data)
 
-        logger = logging.getLogger('ingest-client')
-        logger.info("CREATED INGEST JOB: {}".format(self.ingest_job_id))
+        always_log_info("CREATED INGEST JOB: {}".format(self.ingest_job_id))
 
     def join(self):
         """
@@ -157,9 +156,7 @@ class Engine(object):
 
         # Set cred time
         self.credential_create_time = datetime.datetime.now()
-
-        logger = logging.getLogger('ingest-client')
-        logger.info("(pid={}) JOINED INGEST JOB: {}".format(os.getpid(), self.ingest_job_id))
+        always_log_info("(pid={}) JOINED INGEST JOB: {}".format(os.getpid(), self.ingest_job_id))
 
     def cancel(self):
         """
@@ -196,7 +193,7 @@ class Engine(object):
 
         if self.job_status == 2:
             msg = "(pid={}) Ingest job already completed. Skipping ingest engine start.".format(os.getpid())
-            logger.info(msg)
+            logger.warning(msg)
             raise Exception(msg)
 
         # Do some work
@@ -204,9 +201,9 @@ class Engine(object):
         while True:
             # Check if you need to renew credentials
             if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
-                print("Renewing Credentials")
-                logger.info("Renewing Credentials")
+                logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(os.getpid()))
                 self.join()
+                always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
 
             # Get a task
             message_id, receipt_handle, msg = self.backend.get_task()
