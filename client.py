@@ -13,7 +13,6 @@
 # limitations under the License.
 from ingest.core.engine import Engine
 from ingest.core.config import ConfigFileError
-from pkg_resources import resource_filename
 from six.moves import input
 import datetime
 import argparse
@@ -23,6 +22,7 @@ import os
 import time
 import logging
 from ingest.utils.log import always_log_info
+from ingest.utils.console import print_estimated_job
 
 from ingest.core.backend import BossBackend
 
@@ -148,17 +148,25 @@ def main():
             sys.exit(1)
 
     # Setup logging
-    level = logging.getLevelName(args.log_level.upper())
+    log_level = logging.getLevelName(args.log_level.upper())
     if not args.log_file:
         # Using default log path
-        log_file = os.path.join(resource_filename('ingest', 'logs'),
+        log_path = os.path.expanduser("~/.boss-ingest")
+        log_file = os.path.join(log_path,
                                 'ingest_log{}_pid{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                                                                 os.getpid()))
         # Make sure the logs dir exists if using the default log path
-        if not os.path.exists(resource_filename('ingest', 'logs')):
-            os.makedirs(resource_filename('ingest', 'logs'))
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
     else:
         log_file = args.log_file
+
+    logging.basicConfig(level=log_level,
+                        format='%(asctime)s %(levelname)-8s %(message)s',
+                        datefmt='%m-%d %H:%M',
+                        filename=log_file,
+                        filemode='a')
+    logging.getLogger('ingest-client').addHandler(logging.StreamHandler(sys.stdout))
 
     # Create an engine instance
     try:
@@ -187,6 +195,8 @@ def main():
         # Trying to create or join an ingest
         if args.job_id is None:
             # Creating a new session - make sure the user wants to do this.
+            print_estimated_job(args.config_file)
+            print("\n")
             if not get_confirmation("Would you like to create a NEW ingest job?"):
                 # Don't want to create a new job
                 print("Exiting")
@@ -199,7 +209,7 @@ def main():
                 sys.exit(0)
 
     # Setup engine instance.  Prompt user to confirm things if needed
-    question_msgs = engine.setup(log_file, level)
+    question_msgs = engine.setup()
     if question_msgs:
         for msg in question_msgs:
             if not get_confirmation(msg):
@@ -213,7 +223,7 @@ def main():
         always_log_info("Note: You need this ID to continue this job later!")
 
         if not get_confirmation("Do you want to start uploading now?"):
-            print("OK - Your job is ready and waiting for you. You can resume by providing Ingest Job ID '{}' to the client".format(engine.ingest_job_id))
+            print("OK - Your job is waiting for you. You can resume by providing Ingest Job ID '{}' to the client".format(engine.ingest_job_id))
             sys.exit(0)
 
         # Join job
@@ -223,9 +233,9 @@ def main():
         # Join job
         engine.join()
 
-    # Create worker processes if necessary
+    # Create worker processes
     workers = []
-    for i in range(args.processes_nb - 1):
+    for i in range(args.processes_nb):
         new_pipe = mp.Pipe(False)
         new_process = mp.Process(target=worker_process_run, args=(args.config_file, args.api_token,
                                                                   engine.ingest_job_id, new_pipe[0]))
@@ -238,7 +248,7 @@ def main():
     job_complete = False
     while should_run:
         try:
-            engine.run()
+            engine.monitor()
             # run will end if no more jobs are available, join other processes
             should_run = False
             job_complete = True

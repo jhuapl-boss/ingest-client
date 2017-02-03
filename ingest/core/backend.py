@@ -105,6 +105,20 @@ class Backend(object):
         return NotImplemented
 
     @abstractmethod
+    def get_num_tasks(self):
+        """
+        Method to get the estimated remaining number of tasks
+
+        Args:
+
+        Returns:
+            (int): Approx number of remaining tasks
+
+
+        """
+        return NotImplemented
+
+    @abstractmethod
     def get_task(self):
         """
         Method to get an upload task
@@ -429,6 +443,23 @@ class BossBackend(Backend):
             return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)
         else:
             return None, None, None
+
+    def get_num_tasks(self):
+        """
+        Method to get estimated number of remaining tasks
+
+        Args:
+
+        Returns:
+            (int)
+        """
+        num_tasks = None
+        try:
+            num_tasks = self.queue.attributes["ApproximateNumberOfMessages"]
+        except botocore.exceptions.ClientError as e:
+            pass
+
+        return num_tasks
 
     def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
         """A method to create a tile key.

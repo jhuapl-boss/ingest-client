@@ -20,6 +20,37 @@ import time
 from ..utils.log import always_log_info
 import os
 from math import floor
+from tqdm import tqdm
+import random
+import contextlib
+import sys
+
+
+class DummyTqdmFile(object):
+    """Dummy file-like that will write to tqdm"""
+    file = None
+
+    def __init__(self, file):
+        self.file = file
+
+    def write(self, x):
+        # Avoid print() second call (useless \n)
+        if len(x.rstrip()) > 0:
+            tqdm.write(x, file=self.file)
+
+
+@contextlib.contextmanager
+def stdout_redirect_to_tqdm():
+    save_stdout = sys.stdout
+    try:
+        sys.stdout = DummyTqdmFile(sys.stdout)
+        yield save_stdout
+    # Relay exceptions
+    except Exception as exc:
+        raise exc
+    # Always restore sys.stdout if necessary
+    finally:
+        sys.stdout = save_stdout
 
 
 class Engine(object):
@@ -98,17 +129,8 @@ class Engine(object):
         self.path_processor = self.config.path_processor_class
         self.path_processor.setup(self.config.get_path_processor_params())
 
-    def setup(self, log_file=None, log_level=logging.WARNING):
+    def setup(self):
         """Method to setup the Engine by finishing configuring subclasses and validating the schema"""
-        if not log_file:
-            log_file = 'ingest_log{}_pid{}.log'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), os.getpid())
-
-        logging.basicConfig(level=log_level,
-                            format='%(asctime)s %(levelname)-8s %(message)s',
-                            datefmt='%m-%d %H:%M',
-                            filename=log_file,
-                            filemode='a')
-        logging.getLogger('ingest-client').addHandler(logging.StreamHandler())
         logger = logging.getLogger('ingest-client')
 
         msgs = self.validator.validate()
@@ -170,6 +192,34 @@ class Engine(object):
 
         """
         self.backend.cancel(self.ingest_job_id)
+
+    def monitor(self):
+        """Method to monitor the progress of the ingest job
+
+        Returns:
+            None
+        """
+        with stdout_redirect_to_tqdm() as save_stdout:
+            # tqdm call need to specify sys.stdout, not sys.stderr (default)
+            # and dynamic_ncols=True to autodetect console width
+            pbar = tqdm(desc="Upload Progress", unit='tiles', unit_scale=True, miniters=1, total=self.tile_count,
+                        file=save_stdout, dynamic_ncols=True)
+            while True:
+                logger = logging.getLogger('ingest-client')
+
+                if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
+                    logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(os.getpid()))
+                    self.join()
+                    always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
+
+                # monitor and loop
+                num_tasks = self.backend.get_num_tasks()
+                if not num_tasks:
+                    num_tasks = random.randint(2, self.tile_count)
+                if num_tasks:
+                    # Update bar
+                    pbar.update(num_tasks)
+                time.sleep(3)
 
     def run(self):
         """Method to run the upload loop

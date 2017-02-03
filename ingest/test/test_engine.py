@@ -98,9 +98,7 @@ class EngineBossTestMixin(object):
     def test_setup(self):
         """Test setting up the engine - no error should occur"""
         engine = Engine(self.config_file, self.api_token)
-
-        with tempfile.NamedTemporaryFile() as temp_file:
-            engine.setup(temp_file.name)
+        engine.setup()
 
     def test_create_job(self):
         """Test creating an ingest job - mock server response"""
