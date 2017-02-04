@@ -11,13 +11,13 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.hdf5.Hdf5SingleFilePathProcessor",
+      "class": "ingest.plugins.hdf5.Hdf5SingleFilePathProcessor",
       "params": {
         "filename": "/my/file.h5"
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.hdf5.Hdf5SingleFileTileProcessor",
+      "class": "ingest.plugins.hdf5.Hdf5SingleFileTileProcessor",
       "params": {
         "filesystem": "local",
         "bucket": "",

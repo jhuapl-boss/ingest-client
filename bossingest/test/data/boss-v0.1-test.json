@@ -11,11 +11,11 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.path.TestPathProcessor",
+      "class": "ingest.plugins.path.TestPathProcessor",
       "params": {}
     },
     "tile_processor": {
-      "class": "bossingest.plugins.tile.TestTileProcessor",
+      "class": "ingest.plugins.tile.TestTileProcessor",
       "params": {}
     }
   },

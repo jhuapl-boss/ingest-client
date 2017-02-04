@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import absolute_import
-from bossingest.core.engine import Engine
-from bossingest.core.validator import Validator, BossValidatorV01
-from bossingest.core.backend import Backend, BossBackend
-from bossingest.core.config import Configuration, ConfigFileError
-from bossingest.test.aws import Setup
+from ingest.core.engine import Engine
+from ingest.core.validator import Validator, BossValidatorV01
+from ingest.core.backend import Backend, BossBackend
+from ingest.core.config import Configuration, ConfigFileError
+from ingest.test.aws import Setup
 
 import os
 import unittest
@@ -146,12 +146,12 @@ class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        schema_file = os.path.join(resource_filename("bossingest", "schema"), "boss-v0.1-schema.json")
+        schema_file = os.path.join(resource_filename("ingest", "schema"), "boss-v0.1-schema.json")
         with open(schema_file, 'r') as file_handle:
             s = json.load(file_handle)
             cls.mock_schema = {"schema": s}
 
-        cls.config_file = os.path.join(resource_filename("bossingest", "test/data"), "boss-v0.1-test.json")
+        cls.config_file = os.path.join(resource_filename("ingest", "test/data"), "boss-v0.1-test.json")
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import six
 from abc import ABCMeta, abstractmethod
 import requests
@@ -24,7 +23,7 @@ import botocore
 from pkg_resources import resource_filename
 import os
 
-from ..utils import WaitPrinter
+from ingest.utils import WaitPrinter
 
 
 @six.add_metaclass(ABCMeta)
@@ -279,7 +278,7 @@ class BossBackend(Backend):
         # Load API credentials from intern if needed.
         if not api_token:
             # First try to load token from ./credentials.json
-            cred_file = os.path.abspath(os.path.join(resource_filename("bossingest", '..'),
+            cred_file = os.path.abspath(os.path.join(resource_filename("ingest", '..'),
                                                      self.get_default_token_file_name()))
             if os.path.isfile(cred_file):
                 with open(cred_file, "rt") as cred_handle:

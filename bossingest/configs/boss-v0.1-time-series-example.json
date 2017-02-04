@@ -11,13 +11,13 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.multipage_tiff.SingleTimeTiffPathProcessor",
+      "class": "ingest.plugins.multipage_tiff.SingleTimeTiffPathProcessor",
       "params": {
         "z_0": ""
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.multipage_tiff.SingleTimeTiffTileProcessor",
+      "class": "ingest.plugins.multipage_tiff.SingleTimeTiffTileProcessor",
       "params": {
         "datatype": "uint16",
         "filetype": "tif"

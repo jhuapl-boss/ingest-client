@@ -11,7 +11,7 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.hdf5.Hdf5TimeSeriesPathProcessor",
+      "class": "ingest.plugins.hdf5.Hdf5TimeSeriesPathProcessor",
       "params": {
         "root_dir": "",
         "extension": "hdf5",
@@ -19,7 +19,7 @@
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.hdf5.Hdf5TimeSeriesTileProcessor",
+      "class": "ingest.plugins.hdf5.Hdf5TimeSeriesTileProcessor",
       "params": {
         "filesystem": "local",
         "bucket": "",

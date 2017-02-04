@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from ingest.core.config import Configuration, ConfigFileError
 from six.moves import input
 import logging
 import datetime
@@ -20,7 +21,6 @@ import sys
 import os
 from math import floor
 
-from .config import Configuration, ConfigFileError
 
 class Engine(object):
     def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None):

@@ -21,7 +21,7 @@ from pkg_resources import resource_filename
 from PIL import Image
 import numpy as np
 
-from bossingest.core.config import Configuration
+from ingest.core.config import Configuration
 
 
 class TestCatmaidFileImageStack(unittest.TestCase):
@@ -31,7 +31,7 @@ class TestCatmaidFileImageStack(unittest.TestCase):
         pp = self.config.path_processor_class
         pp.setup(self.config.get_path_processor_params())
 
-        assert pp.parameters["root_dir"] == resource_filename("bossingest", "test/data/example_catmaid_stack")
+        assert pp.parameters["root_dir"] == resource_filename("ingest", "test/data/example_catmaid_stack")
         assert pp.parameters["ingest_job"]["extent"]["y"] == [0, 1024]
 
     def test_CatmaidFileImageStackPathProcessor_process(self):
@@ -83,7 +83,7 @@ class TestCatmaidFileImageStack(unittest.TestCase):
         test_img = np.array(test_img, dtype="uint8")
 
         # Open original data
-        truth_file = os.path.join(resource_filename("bossingest", "test/data/example_catmaid_stack/0"), "0_0_0.png")
+        truth_file = os.path.join(resource_filename("ingest", "test/data/example_catmaid_stack/0"), "0_0_0.png")
         truth_img = Image.open(truth_file)
         truth_img = np.array(truth_img, dtype="uint8")
 
@@ -106,7 +106,7 @@ class TestCatmaidFileImageStack(unittest.TestCase):
         test_img = np.array(test_img, dtype="uint8")
 
         # Open original data
-        truth_file = os.path.join(resource_filename("bossingest", "test/data/example_catmaid_stack/1"), "1_0_0.png")
+        truth_file = os.path.join(resource_filename("ingest", "test/data/example_catmaid_stack/1"), "1_0_0.png")
         truth_img = Image.open(truth_file)
         truth_img = np.array(truth_img, dtype="uint8")
 
@@ -115,13 +115,13 @@ class TestCatmaidFileImageStack(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.config_file = os.path.join(resource_filename("bossingest", "test/data"), "boss-v0.1-catmaidStack.json")
+        cls.config_file = os.path.join(resource_filename("ingest", "test/data"), "boss-v0.1-catmaidStack.json")
 
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
         # inject the file path since we don't want to hardcode
-        cls.example_config_data["client"]["path_processor"]["params"]["root_dir"] = resource_filename("bossingest",
+        cls.example_config_data["client"]["path_processor"]["params"]["root_dir"] = resource_filename("ingest",
                                                                                                       "test/data/example_catmaid_stack")
 
         cls.config = Configuration(cls.example_config_data)
