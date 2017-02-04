@@ -18,8 +18,8 @@ import numpy as np
 from math import floor
 import os
 import re
-from ingest.utils.filesystem import DynamicFilesystemAbsPath
 
+from ..utils.filesystem import DynamicFilesystemAbsPath
 from .path import PathProcessor
 from .tile import TileProcessor
 

@@ -11,7 +11,7 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "ingest.plugins.multipage_tiff.TiffMultiFileHyperStackPathProcessor",
+      "class": "bossingest.plugins.multipage_tiff.TiffMultiFileHyperStackPathProcessor",
       "params": {
         "root_dir": "/data",
         "extension": "tif",
@@ -20,7 +20,7 @@
       }
     },
     "tile_processor": {
-      "class": "ingest.plugins.multipage_tiff.TiffMultiFileHyperStackTileProcessor",
+      "class": "bossingest.plugins.multipage_tiff.TiffMultiFileHyperStackTileProcessor",
       "params": {
         "time_chunk_size": 2000,
         "num_z_slices": 3,

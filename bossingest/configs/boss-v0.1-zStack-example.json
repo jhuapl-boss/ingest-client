@@ -11,7 +11,7 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "ingest.plugins.stack.ZindexStackPathProcessor",
+      "class": "bossingest.plugins.stack.ZindexStackPathProcessor",
       "params": {
         "root_dir": "",
         "extension": "png",
@@ -19,7 +19,7 @@
       }
     },
     "tile_processor": {
-      "class": "ingest.plugins.stack.ZindexStackTileProcessor",
+      "class": "bossingest.plugins.stack.ZindexStackTileProcessor",
       "params": {
         "filesystem": "local",
         "extension": "png"

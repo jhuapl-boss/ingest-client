@@ -16,7 +16,6 @@ import six
 from PIL import Image
 import re
 import os
-from ingest.utils.filesystem import DynamicFilesystemAbsPath
 import h5py
 import numpy as np
 from math import floor
@@ -24,8 +23,9 @@ import botocore
 import logging
 
 
-from ingest.plugins.path import PathProcessor
-from ingest.plugins.tile import TileProcessor
+from ..utils.filesystem import DynamicFilesystemAbsPath
+from .path import PathProcessor
+from .tile import TileProcessor
 
 
 class Hdf5TimeSeriesPathProcessor(PathProcessor):

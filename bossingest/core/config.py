@@ -16,12 +16,12 @@ from abc import ABCMeta, abstractmethod
 
 import six
 from six.moves import cPickle as pickle
-from ingest.core.validator import Validator
-from ingest.core.backend import Backend
 import importlib
 from pkg_resources import resource_filename
 import os
 
+from .validator import Validator
+from .backend import Backend
 
 @six.python_2_unicode_compatible
 class ConfigPropertyObject(object):
@@ -380,7 +380,7 @@ class Configuration(object):
             schema_name = self.config_data['schema']['name']
         except KeyError as err:
             raise ConfigFileError("The specified schema was not found: {}. Try to update your ingest client library or double check your ingest job configuration file".format(self.config_data['schema']['name']))
-        with open(os.path.join(resource_filename("ingest", "schema"), "{}.json".format(schema_name)), 'rt') as schema_file:
+        with open(os.path.join(resource_filename("bossingest", "schema"), "{}.json".format(schema_name)), 'rt') as schema_file:
             self.schema = json.load(schema_file)
 
     def load_plugins(self):
@@ -425,7 +425,7 @@ class Configuration(object):
         Method to get a validator instance based on the configuration
 
         Returns:
-            (ingest.core.validator.Validator): Validator instance
+            (bossingest.core.validator.Validator): Validator instance
 
         """
         if not self.config_data:
@@ -442,7 +442,7 @@ class Configuration(object):
         Method to get a backend instance based on the configuration
 
         Returns:
-            (ingest.core.backend.Backend): Backend instance
+            (bossingest.core.backend.Backend): Backend instance
 
         """
         if not self.config_data:

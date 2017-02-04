@@ -21,8 +21,8 @@ from pkg_resources import resource_filename
 from PIL import Image
 import numpy as np
 
-from ingest.core.config import Configuration
-from ingest.plugins.multipage_tiff import load_tiff_multipage
+from bossingest.core.config import Configuration
+from bossingest.plugins.multipage_tiff import load_tiff_multipage
 
 
 class TestSingleMultipageTiff(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestSingleMultipageTiff(unittest.TestCase):
         pp = self.config.path_processor_class
         pp.setup(self.config.get_path_processor_params())
 
-        assert pp.parameters["z_0"] == os.path.join(resource_filename("ingest", "test/data"),
+        assert pp.parameters["z_0"] == os.path.join(resource_filename("bossingest", "test/data"),
                                                     "test_multipage.tif")
         assert pp.parameters["ingest_job"]["extent"]["x"] == [0, 512]
 
@@ -40,7 +40,7 @@ class TestSingleMultipageTiff(unittest.TestCase):
         """Test running the path processor"""
         pp = self.config.path_processor_class
         pp.setup(self.config.get_path_processor_params())
-        assert pp.process(0, 0, 0, 0) == os.path.join(resource_filename("ingest", "test/data"),
+        assert pp.process(0, 0, 0, 0) == os.path.join(resource_filename("bossingest", "test/data"),
                                                       "test_multipage.tif")
 
     def test_SingleTimeTiffPathProcessor_process_invalid(self):
@@ -93,13 +93,13 @@ class TestSingleMultipageTiff(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.config_file = os.path.join(resource_filename("ingest", "test/data"), "boss-v0.1-singleMultipageTiff.json")
+        cls.config_file = os.path.join(resource_filename("bossingest", "test/data"), "boss-v0.1-singleMultipageTiff.json")
 
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
         # inject the file path since we don't want to hardcode
-        cls.example_config_data["client"]["path_processor"]["params"]["z_0"] = os.path.join(resource_filename("ingest",
+        cls.example_config_data["client"]["path_processor"]["params"]["z_0"] = os.path.join(resource_filename("bossingest",
                                                                                                               "test/data"),
                                                                                                               "test_multipage.tif")
 
