@@ -112,7 +112,7 @@ There are three operations you can perform with the ingest client - Create, Join
 	- Assuming you have created a file, simply call the ingest client
 	 
 		```
-		python client.py <absolute_path_to_config_file>
+		python boss-ingest <absolute_path_to_config_file>
 		```
 	- After creating the new Ingest Job, the client will print the ingest job ID and it will be also logged.  
 
@@ -122,42 +122,42 @@ There are three operations you can perform with the ingest client - Create, Join
 	- You can join an existing ingest job and start uploading data any time after it has been created. This can be useful if the client has crashed, or if you want to run the client on additional nodes in parallel.
 	
 		```
-		python client.py <absolute_path_to_config_file> --job-id <ingest_job_id>
+		python boss-ingest <absolute_path_to_config_file> --job-id <ingest_job_id>
 		```
 		or
 		
 		```
-		python client.py <absolute_path_to_config_file> -j <ingest_job_id>
+		python boss-ingest <absolute_path_to_config_file> -j <ingest_job_id>
 		```
 
 - **Cancelling an Ingest Job**
 	-	Sometimes you may want to stop an ingest job. You can do this by "cancelling" it.  Currently this will delete all tiles that have been uploaded but not ingested into the Boss yet.  Any data that made its way through the ingest pipeline will remain.  Also temporary queues will be purged and deleted.
 
 		```
-		python client.py --cancel --job-id <ingest_job_id>
+		python boss-ingest --cancel --job-id <ingest_job_id>
 		```
 		or
 		
 		```
-		python client.py -c -j <ingest_job_id>
+		python boss-ingest -c -j <ingest_job_id>
 		```
  
         If you are working with the non-production Boss instance (api.theboss.io), then you can provide a configuration file specifying the desired host as the commands shown above will default to the production Boss environment. 
 		
 		```
-		python client.py <absolute_path_to_config_file> -c -j <ingest_job_id>
+		python boss-ingest <absolute_path_to_config_file> -c -j <ingest_job_id>
 		```
 
 - **Multiprocessing**
 	-   You can choose to have multiple upload engines start in parallel processes by setting the `-p` argument as outlined in the example below. (Default number of upload processes = 1)
 
 		```
-		python client.py <absolute_path_to_config_file> --processes_nb <number_of_processes>
+		python boss-ingest <absolute_path_to_config_file> --processes_nb <number_of_processes>
 		```
 		or
 		
 		```
-		python client.py <absolute_path_to_config_file> -p <number_of_processes>
+		python boss-ingest <absolute_path_to_config_file> -p <number_of_processes>
 		```
 
 
@@ -167,14 +167,14 @@ There are three operations you can perform with the ingest client - Create, Join
 To enable support for many different ways to organize data and many different types of file formats, plugins are used to convert tile indices to a file handle for uploading.  Some plugins have been initially provided as an example:
 
 - [CATMAID](http://catmaid.readthedocs.io/en/stable/tile_sources.html) File-based image stack
-	- `path_processor``class` = "ingest.plugins.filesystem.CatmaidFileImageStackPathProcessor"
-	- `tile_processor``class` = "ingest.plugins.filesystem.CatmaidFileImageStackTileProcessor"
+	- `path_processor``class` = "bossingest.plugins.filesystem.CatmaidFileImageStackPathProcessor"
+	- `tile_processor``class` = "bossingest.plugins.filesystem.CatmaidFileImageStackTileProcessor"
 	- An example configuration file using this plugin is `ingest/configs/boss-v0.1-catmaid-file-stack-example.json`
 	- This plugin assumes the data is organized as a CATMAID file-based image stack (type 1 on their docs page). You must provide the `filetype` (e.g. "png") and the `root_dir` as custom parameters
 
 - Multi-page TIFF image 
-	- `path_processor``class` = "ingest.plugins.multipage_tiff.SingleTimeTiffPathProcessor"
-	- `tile_processor``class` = "ingest.plugins.multipage_tiff.SingleTimeTiffTileProcessor"
+	- `path_processor``class` = "bossingest.plugins.multipage_tiff.SingleTimeTiffPathProcessor"
+	- `tile_processor``class` = "bossingest.plugins.multipage_tiff.SingleTimeTiffTileProcessor"
 	- An example configuration file using this plugin is `/ingest/configs/boss-v0.1-time-series-example.json`
 	- This plugin is for time-series calcium imaging data.  It assumes each z-slice is stored in a single multipage TIFF file where consecutive pages are consecutive time samples.  You must provide custom parameters indicating the `filetype`, `datatype`, and location to each file where the key is "z_<slice_index>" and value is the absolute path. 
 

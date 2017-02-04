@@ -19,8 +19,8 @@ from intern.resource.boss.resource import ChannelResource
 import numpy as np
 import time
 
-from ingest.plugins.path import PathProcessor
-from ingest.plugins.tile import TileProcessor
+from .path import PathProcessor
+from .tile import TileProcessor
 
 
 class InternPathProcessor(PathProcessor):

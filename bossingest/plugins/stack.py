@@ -16,10 +16,10 @@ import six
 from PIL import Image
 import re
 import os
-from ingest.utils.filesystem import DynamicFilesystem
 
-from ingest.plugins.path import PathProcessor
-from ingest.plugins.tile import TileProcessor
+from ..utils.filesystem import DynamicFilesystem
+from .path import PathProcessor
+from .tile import TileProcessor
 
 
 class ZindexStackPathProcessor(PathProcessor):

@@ -11,7 +11,7 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "ingest.plugins.hdf5.Hdf5ChunkPathProcessor",
+      "class": "bossingest.plugins.hdf5.Hdf5ChunkPathProcessor",
       "params": {
         "root_dir": "",
         "extension": "hdf5",
@@ -26,7 +26,7 @@
       }
     },
     "tile_processor": {
-      "class": "ingest.plugins.hdf5.Hdf5ChunkTileProcessor",
+      "class": "bossingest.plugins.hdf5.Hdf5ChunkTileProcessor",
       "params": {
         "filesystem": "local",
         "bucket": "",
