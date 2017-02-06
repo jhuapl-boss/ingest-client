@@ -25,12 +25,11 @@ import multiprocessing as mp
 import os
 import time
 import logging
-from ingest.utils.log import always_log_info
-from ingest.utils.console import print_estimated_job
+from bossingest.utils.log import always_log_info
+from bossingest.utils.console import print_estimated_job
 
 
-
-def get_confirmation(prompt):
+def get_confirmation(prompt, force=False):
     """Method to confirm decisions
 
     Args:
@@ -39,19 +38,22 @@ def get_confirmation(prompt):
     Returns:
         (bool): True indicating yes, False indicating no
     """
-    decision = False
-    while True:
-        confirm = input("{} (y/n): ".format(prompt))
-        if confirm.lower() == "y":
-            decision = True
-            break
-        elif confirm.lower() == "n":
-            decision = False
-            break
-        else:
-            print("Enter 'y' or 'n' for 'yes' or 'no'")
+    if not force:
+        decision = False
+        while True:
+            confirm = input("{} (y/n): ".format(prompt))
+            if confirm.lower() == "y":
+                decision = True
+                break
+            elif confirm.lower() == "n":
+                decision = False
+                break
+            else:
+                print("Enter 'y' or 'n' for 'yes' or 'no'")
 
-    return decision
+        return decision
+    else:
+        return True
 
 
 def worker_process_run(config_file, api_token, job_id, pipe):
@@ -111,6 +113,10 @@ def main():
                         action="store_true",
                         default=None,
                         help="Flag indicating if you'd like to cancel (and remove) an ingest job. This will not delete data already ingested, but will prevent continuing this ingest job.")
+    parser.add_argument("--force", "-f",
+                        action="store_true",
+                        default=False,
+                        help="Flag indicating if you'd like ignore all confirmation prompts.")
     parser.add_argument("--processes_nb", "-p", type=int,
                         default=1,
                         help="The number of client processes that will upload the images of the ingest job.")
@@ -137,7 +143,7 @@ def main():
                 print("Error: You must provide an ingest job ID to cancel")
                 sys.exit(1)
 
-            if not get_confirmation("Are you sure you want to cancel ingest job {}? ".format(args.job_id)):
+            if not get_confirmation("Are you sure you want to cancel ingest job {}? ".format(args.job_id), args.force):
                 print("Command ignored. Job not cancelled")
                 sys.exit(0)
 
@@ -185,7 +191,7 @@ def main():
             print("Error: You must provide an ingest job ID to cancel")
             sys.exit(1)
 
-        if not get_confirmation("Are you sure you want to cancel ingest job {}? ".format(args.job_id)):
+        if not get_confirmation("Are you sure you want to cancel ingest job {}? ".format(args.job_id), args.force):
             print("Command ignored. Job not cancelled")
             sys.exit(0)
 
@@ -200,13 +206,13 @@ def main():
             # Creating a new session - make sure the user wants to do this.
             print_estimated_job(args.config_file)
             print("\n")
-            if not get_confirmation("Would you like to create a NEW ingest job?"):
+            if not get_confirmation("Would you like to create a NEW ingest job?", args.force):
                 # Don't want to create a new job
                 print("Exiting")
                 sys.exit(0)
         else:
             # Resuming a session - make sure the user wants to do this.
-            if not get_confirmation("Are you sure you want to resume ingest job {}?".format(args.job_id)):
+            if not get_confirmation("Are you sure you want to resume ingest job {}?".format(args.job_id), args.force):
                 # Don't want to resume
                 print("Exiting")
                 sys.exit(0)
@@ -215,7 +221,7 @@ def main():
     question_msgs = engine.setup()
     if question_msgs:
         for msg in question_msgs:
-            if not get_confirmation(msg):
+            if not get_confirmation(msg, args.force):
                 print("Ingest job cancelled")
                 sys.exit(0)
 
@@ -225,7 +231,7 @@ def main():
         always_log_info("Successfully Created Ingest Job ID: {}".format(engine.ingest_job_id))
         always_log_info("Note: You need this ID to continue this job later!")
 
-        if not get_confirmation("Do you want to start uploading now?"):
+        if not get_confirmation("Do you want to start uploading now?", args.force):
             print("OK - Your job is waiting for you. You can resume by providing Ingest Job ID '{}' to the client".format(engine.ingest_job_id))
             sys.exit(0)
 

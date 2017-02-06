@@ -373,13 +373,11 @@ class BossBackend(Backend):
             else:
                 result = r.json()
                 job_status = int(result['ingest_job']["status"])
-                wp.print_msg("Waiting for ingest job to be created")
+                wp.print_msg("(pid={}) Waiting for ingest job to be created".format(os.getpid()))
                 if job_status == 0:
                     time.sleep(5)
                 else:
                     wp.finished()
-                    always_log_info("Ingest Job ready for uploading")
-
                     creds = result["credentials"]
                     queue = result["ingest_job"]["upload_queue"]
                     tile_bucket = result["tile_bucket_name"]
@@ -433,12 +431,12 @@ class BossBackend(Backend):
                 msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=1)
                 break
             except botocore.exceptions.ClientError as e:
-                print("Waiting for credentials to be valid")
+                print("(pid={}) Waiting for credentials to be valid".format(os.getpid()))
                 try_cnt += 1
-                time.sleep(5)
+                time.sleep(15)
 
                 if try_cnt >= 20:
-                    raise Exception("Credentials failed to be come valid")
+                    raise Exception("(pid={}) Credentials failed to be come valid".format(os.getpid()))
 
         if msg:
             return msg[0].message_id, msg[0].receipt_handle, json.loads(msg[0].body)

@@ -19,39 +19,10 @@ import time
 from ..utils.log import always_log_info
 import os
 from math import floor
-from tqdm import tqdm
 import random
-import contextlib
-import sys
-
-
-class DummyTqdmFile(object):
-    """Dummy file-like that will write to tqdm"""
-    file = None
-
-    def __init__(self, file):
-        self.file = file
-
-    def write(self, x):
-        # Avoid print() second call (useless \n)
-        if len(x.rstrip()) > 0:
-            tqdm.write(x, file=self.file)
-
-
-@contextlib.contextmanager
-def stdout_redirect_to_tqdm():
-    save_stdout = sys.stdout
-    try:
-        sys.stdout = DummyTqdmFile(sys.stdout)
-        yield save_stdout
-    # Relay exceptions
-    except Exception as exc:
-        raise exc
-    # Always restore sys.stdout if necessary
-    finally:
-        sys.stdout = save_stdout
-
 from .config import Configuration, ConfigFileError
+from collections import deque
+
 
 class Engine(object):
     def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None):
@@ -199,27 +170,42 @@ class Engine(object):
         Returns:
             None
         """
-        with stdout_redirect_to_tqdm() as save_stdout:
-            # tqdm call need to specify sys.stdout, not sys.stderr (default)
-            # and dynamic_ncols=True to autodetect console width
-            pbar = tqdm(desc="Upload Progress", unit='tiles', unit_scale=True, miniters=1, total=self.tile_count,
-                        file=save_stdout, dynamic_ncols=True)
-            while True:
-                logger = logging.getLogger('ingest-client')
+        logger = logging.getLogger('ingest-client')
+        tile_rate_samples = deque(maxlen=6)
+        last_task_count = None
+        start_time = time.time()
+        print_time = time.time()
+        avg_tile_rate = 0
+        while True:
+            if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
+                logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(os.getpid()))
+                self.join()
+                always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
 
-                if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
-                    logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(os.getpid()))
-                    self.join()
-                    always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
+            # monitor and loop
+            num_tasks = self.backend.get_num_tasks()
+            if num_tasks:
+                if not last_task_count:
+                    last_task_count = num_tasks
+                    continue
 
-                # monitor and loop
-                num_tasks = self.backend.get_num_tasks()
-                if not num_tasks:
-                    num_tasks = random.randint(2, self.tile_count)
+                tile_rate_samples.append(last_task_count - num_tasks)
+
+                avg_tile_rate = sum(tile_rate_samples) / float(len(tile_rate_samples))
+
+            if (time.time() - print_time) > 30:
+                print_time = time.time()
+                # Print an update every 30 seconds
                 if num_tasks:
-                    # Update bar
-                    pbar.update(num_tasks)
-                time.sleep(3)
+                    always_log_info("Uploading {:.2f} tiles/min - Approx {:d} tiles remaining - Elapsed time {:.2f} minutes".format(avg_tile_rate * 5,
+                                                                                                                                    num_tasks,
+                                                                                                                                    (time.time() - start_time) / 60))
+
+                else:
+                    always_log_info("Uploading in progress: Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60))
+
+            # Wait to loop
+            time.sleep(5)
 
     def run(self):
         """Method to run the upload loop

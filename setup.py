@@ -8,7 +8,7 @@ from os import path
 # twine upload dist/*
 
 
-__version__ = '0.9.2'
+__version__ = '0.9.0'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -47,6 +47,8 @@ setup(
     classifiers=[
       'Development Status :: 4 - Beta',
       'Programming Language :: Python :: 3.5',
+      'Programming Language :: Python :: 3.4',
+      'Programming Language :: Python :: 2.7',
     ],
     keywords=[
         'brain',
@@ -60,6 +62,8 @@ setup(
         'calcium',
         'database',
         'boss',
-        'microns'
+        'microns',
+        'iarpa',
+        'jhu'
     ]
 )
