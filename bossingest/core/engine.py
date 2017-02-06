@@ -164,7 +164,7 @@ class Engine(object):
         """
         self.backend.cancel(self.ingest_job_id)
 
-    def monitor(self):
+    def monitor(self, workers):
         """Method to monitor the progress of the ingest job
 
         Returns:
@@ -206,6 +206,15 @@ class Engine(object):
 
             # Wait to loop
             time.sleep(5)
+
+            # Check to see if worker processes ended
+            alive_cnt = 0
+            for worker in workers:
+                if worker[0].is_alive():
+                    alive_cnt += 1
+
+            if alive_cnt == 0:
+                break
 
     def run(self):
         """Method to run the upload loop

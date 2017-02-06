@@ -94,3 +94,35 @@ class TestPathProcessor(PathProcessor):
 
         """
         return os.path.join(resource_filename("bossingest", "test/data"), "test_tile.png")
+
+
+class TestPassThroughPathProcessor(PathProcessor):
+    """Example processor for scale testing"""
+    def setup(self, parameters):
+        """
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+
+    def process(self, x_index, y_index, z_index, t_index=None):
+        """
+        Method to compute the file path for the indicated tile
+
+        Test processor always returns empty string since random data is to be generated during scale testing.
+
+        Args:
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (str): An absolute file path that contains the specified data
+
+        """
+        return ""

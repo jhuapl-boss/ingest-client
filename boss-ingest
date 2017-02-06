@@ -257,7 +257,7 @@ def main():
     job_complete = False
     while should_run:
         try:
-            engine.monitor()
+            engine.monitor(workers)
             # run will end if no more jobs are available, join other processes
             should_run = False
             job_complete = True
