@@ -36,7 +36,7 @@ class ResponsesMixin(object):
 
     def add_default_response(self):
         mocked_repsonse = {"id": 23}
-        responses.add(responses.POST, 'https://api.theboss.io/v0.7/ingest/',
+        responses.add(responses.POST, 'https://api.theboss.io/v0.8/ingest/',
                       json=mocked_repsonse, status=201)
 
         mocked_repsonse = {"ingest_job": {"id": 23,
@@ -53,10 +53,10 @@ class ResponsesMixin(object):
                            "credentials": self.aws_creds,
                            "resource": {"resource": "stuff"}
                            }
-        responses.add(responses.GET, 'https://api.theboss.io/v0.7/ingest/23',
+        responses.add(responses.GET, 'https://api.theboss.io/v0.8/ingest/23',
                       json=mocked_repsonse, status=200)
 
-        responses.add(responses.DELETE, 'https://api.theboss.io/v0.7/ingest/23', status=204)
+        responses.add(responses.DELETE, 'https://api.theboss.io/v0.8/ingest/23', status=204)
 
 
 class BossBackendTestMixin(object):
