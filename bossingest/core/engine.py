@@ -182,38 +182,44 @@ class Engine(object):
                 self.join()
                 always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
 
-            # monitor and loop
-            num_tasks = self.backend.get_num_tasks()
-            if num_tasks:
+            status = self.backend.get_job_status(self.ingest_job_id)
+            if status:
                 if not last_task_count:
-                    last_task_count = num_tasks
+                    last_task_count = status["current_message_count"]
                     continue
 
-                tile_rate_samples.append(last_task_count - num_tasks)
+                tile_rate_samples.append(last_task_count - status["current_message_count"])
+                last_task_count = status["current_message_count"]
 
                 avg_tile_rate = sum(tile_rate_samples) / float(len(tile_rate_samples))
 
             if (time.time() - print_time) > 30:
                 print_time = time.time()
                 # Print an update every 30 seconds
-                if num_tasks:
-                    always_log_info("Uploading {:.2f} tiles/min - Approx {:d} tiles remaining - Elapsed time {:.2f} minutes".format(avg_tile_rate * 5,
-                                                                                                                                    num_tasks,
-                                                                                                                                    (time.time() - start_time) / 60))
+                if status:
+                    if status["current_message_count"] != 0:
+                        log_str = "Uploading ~{:.2f} tiles/min".format(avg_tile_rate * 6)
+                        log_str += " - Approx {:d} of {:d} tiles remaining".format(status["current_message_count"],
+                                                                                   status["total_message_count"])
+                        log_str += " - Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60)
+                        always_log_info(log_str)
+                    else:
+                        always_log_info("Waiting to ensure all upload tasks have been processed. Just a few minutes longer...")
 
                 else:
                     always_log_info("Uploading in progress: Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60))
 
             # Wait to loop
-            time.sleep(5)
+            time.sleep(10)
 
-            # Check to see if worker processes ended
+            # Check to see if worker processes have all ended
             alive_cnt = 0
             for worker in workers:
                 if worker[0].is_alive():
                     alive_cnt += 1
 
             if alive_cnt == 0:
+                # if no processes are alive you are done (or something broke)! Bail.
                 break
 
     def run(self):
@@ -257,13 +263,6 @@ class Engine(object):
                 time.sleep(10)
                 wait_cnt += 1
                 if wait_cnt < self.msg_wait_iterations:
-                    # Compute time
-                    wait_min = int(floor((10 * wait_cnt) / 60))
-                    wait_sec = int((10 * wait_cnt) % 60)
-
-                    print("(pid={}) Waited {} min {} sec of 3 minutes for upload tasks to appear...".format(os.getpid(),
-                                                                                                            wait_min,
-                                                                                                            wait_sec))
                     continue
                 else:
                     break

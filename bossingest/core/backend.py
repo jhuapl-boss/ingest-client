@@ -106,14 +106,15 @@ class Backend(object):
         return NotImplemented
 
     @abstractmethod
-    def get_num_tasks(self):
+    def get_job_status(self, ingest_job_id):
         """
-        Method to get the estimated remaining number of tasks
+        Method to get the ingest job status
 
         Args:
+            ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int): Approx number of remaining tasks
+            (dict): Job status dictionary, including the number of messages in the queue
 
 
         """
@@ -264,7 +265,7 @@ class BossBackend(Backend):
         self.host = None
         self.api_headers = None
         Backend.__init__(self, config)
-        self.api_version = "v0.7"
+        self.api_version = "v0.8"
         self.validate_ssl = True
         self.credential_timeout = 3300  # Currently credentials expire in 1 hr, so renew after 55 minutes
 
@@ -443,22 +444,23 @@ class BossBackend(Backend):
         else:
             return None, None, None
 
-    def get_num_tasks(self):
+    def get_job_status(self, ingest_job_id):
         """
-        Method to get estimated number of remaining tasks
+        Method to get the job status
 
         Args:
+            ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
             (int)
         """
-        num_tasks = None
-        try:
-            num_tasks = self.queue.attributes["ApproximateNumberOfMessages"]
-        except botocore.exceptions.ClientError as e:
-            pass
+        r = requests.get('{}/{}/ingest/{}/status'.format(self.host, self.api_version, ingest_job_id),
+                         headers=self.api_headers, verify=self.validate_ssl)
 
-        return num_tasks
+        if r.status_code != 200:
+            raise Exception("Failed to get ingest job status: {}".format(r.text))
+        else:
+            return r.json()
 
     def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
         """A method to create a tile key.

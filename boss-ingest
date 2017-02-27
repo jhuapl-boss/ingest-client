@@ -231,7 +231,7 @@ def main():
         always_log_info("Successfully Created Ingest Job ID: {}".format(engine.ingest_job_id))
         always_log_info("Note: You need this ID to continue this job later!")
 
-        if not get_confirmation("Do you want to start uploading now?", args.force):
+        if not get_confirmation("\nDo you want to start uploading now?", args.force):
             print("OK - Your job is waiting for you. You can resume by providing Ingest Job ID '{}' to the client".format(engine.ingest_job_id))
             sys.exit(0)
 
@@ -250,6 +250,9 @@ def main():
                                                                   engine.ingest_job_id, new_pipe[0]))
         workers.append((new_process, new_pipe[1]))
         new_process.start()
+
+        # Sleep to slowly ramp up load on lambda
+        time.sleep(.25)
 
     # Start the main process engine
     start_time = time.time()
