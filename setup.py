@@ -37,7 +37,7 @@ setup(
     author_email='iarpamicrons@jhuapl.edu',
 
     scripts=['boss-ingest'],
-    packages=['bossingest'],
+    packages=['ingestclient'],
     include_package_data=True,
 
     url='https://github.com/jhuapl-boss/ingest-client',

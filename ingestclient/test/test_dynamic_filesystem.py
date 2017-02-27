@@ -23,7 +23,7 @@ import numpy as np
 from moto import mock_s3
 import boto3
 
-from bossingest.utils.filesystem import DynamicFilesystem, DynamicFilesystemAbsPath
+from ingestclient.utils.filesystem import DynamicFilesystem, DynamicFilesystemAbsPath
 
 
 class TestDynamicFilesystem(unittest.TestCase):
@@ -51,9 +51,9 @@ class TestDynamicFilesystem(unittest.TestCase):
         bucket = s3.Bucket(cls.config_s3["bucket"])
 
         # Put images in S3
-        cls.test_imgs = [os.path.join(resource_filename("bossingest", "test/data/example_z_stack"),
+        cls.test_imgs = [os.path.join(resource_filename("ingestclient", "test/data/example_z_stack"),
                                       "3253_my_stack_section000.png"),
-                         os.path.join(resource_filename("bossingest", "test/data/example_z_stack"),
+                         os.path.join(resource_filename("ingestclient", "test/data/example_z_stack"),
                                       "3254_my_stack_section001.png")]
 
         cls.imgs = ["example_z_stack/3253_my_stack_section000.png",
@@ -83,7 +83,7 @@ class TestDynamicFilesystem(unittest.TestCase):
 
     def test_local(self):
         """Test local filesystem"""
-        local_base = os.path.join(resource_filename("bossingest", "test/data"))
+        local_base = os.path.join(resource_filename("ingestclient", "test/data"))
         fs = DynamicFilesystem("local", self.config_local)
         for truth, img in zip(self.test_imgs, self.imgs):
             self.file_tests(fs, truth, os.path.join(local_base, img))
@@ -120,9 +120,9 @@ class TestDynamicFilesystemAbsPath(unittest.TestCase):
         bucket = s3.Bucket(cls.config_s3["bucket"])
 
         # Put images in S3
-        cls.test_imgs = [os.path.join(resource_filename("bossingest", "test/data/example_z_stack"),
+        cls.test_imgs = [os.path.join(resource_filename("ingestclient", "test/data/example_z_stack"),
                                       "3253_my_stack_section000.png"),
-                         os.path.join(resource_filename("bossingest", "test/data/example_z_stack"),
+                         os.path.join(resource_filename("ingestclient", "test/data/example_z_stack"),
                                       "3254_my_stack_section001.png")]
 
         cls.imgs = ["example_z_stack/3253_my_stack_section000.png",
@@ -138,7 +138,7 @@ class TestDynamicFilesystemAbsPath(unittest.TestCase):
 
     def test_local(self):
         """Test local filesystem"""
-        local_base = os.path.join(resource_filename("bossingest", "test/data"))
+        local_base = os.path.join(resource_filename("ingestclient", "test/data"))
         fs = DynamicFilesystemAbsPath("local", self.config_local)
         for truth, img in zip(self.test_imgs, self.imgs):
             self.assertEqual(fs.get_file(os.path.join(local_base, img)), truth)

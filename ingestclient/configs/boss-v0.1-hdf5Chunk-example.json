@@ -11,18 +11,29 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.stack.ZindexStackPathProcessor",
+      "class": "ingestclient.plugins.hdf5.Hdf5ChunkPathProcessor",
       "params": {
         "root_dir": "",
-        "extension": "png",
-        "base_filename": "<o:3253>_my_stack_section<p:3>"
+        "extension": "hdf5",
+        "prefix": "test_data",
+        "x_offset": 0,
+        "y_offset": 0,
+        "z_offset": 0,
+        "x_chunk_size": 512,
+        "y_chunk_size": 512,
+        "z_chunk_size": 260,
+        "use_python_convention": true
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.stack.ZindexStackTileProcessor",
+      "class": "ingestclient.plugins.hdf5.Hdf5ChunkTileProcessor",
       "params": {
         "filesystem": "local",
-        "extension": "png"
+        "bucket": "",
+        "upload_format": "tiff",
+        "z_chunk_size": 260,
+        "data_name": "img",
+        "datatype": "uint8"
       }
     }
   },
@@ -34,14 +45,14 @@
   "ingest_job": {
     "resolution": 0,
     "extent": {
-      "x": [0, 8192],
-      "y": [0, 8192],
-      "z": [0, 500],
+      "x": [0, 1024],
+      "y": [0, 1024],
+      "z": [0, 256],
       "t": [0, 1]
     },
     "tile_size": {
-      "x": 1024,
-      "y": 1024,
+      "x": 512,
+      "y": 512,
       "z": 1,
       "t": 1
     }

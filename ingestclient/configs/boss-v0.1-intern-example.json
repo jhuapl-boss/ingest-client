@@ -11,16 +11,22 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.multipage_tiff.SingleTimeTiffPathProcessor",
+      "class": "ingestclient.plugins.intern.InternPathProcessor",
       "params": {
-        "z_0": ""
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.multipage_tiff.SingleTimeTiffTileProcessor",
+      "class": "ingestclient.plugins.intern.InternTileProcessor",
       "params": {
-        "datatype": "uint16",
-        "filetype": "tif"
+        "x_offset": 0,
+        "y_offset": 0,
+        "z_offset": 0,
+        "x_tile": 1024,
+        "y_tile": 1024,
+        "collection": "col1",
+        "experiment": "exp1",
+        "channel": "ch1",
+        "resolution": 0
       }
     }
   },
@@ -32,14 +38,14 @@
   "ingest_job": {
     "resolution": 0,
     "extent": {
-      "x": [0, 512],
-      "y": [0, 256],
-      "z": [0, 1],
-      "t": [0, 10]
+      "x": [0, 8192],
+      "y": [0, 8192],
+      "z": [0, 500],
+      "t": [0, 1]
     },
     "tile_size": {
-      "x": 512,
-      "y": 256,
+      "x": 1024,
+      "y": 1024,
       "z": 1,
       "t": 1
     }

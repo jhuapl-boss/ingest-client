@@ -93,7 +93,7 @@ class TestPathProcessor(PathProcessor):
             (str): An absolute file path that contains the specified data
 
         """
-        return os.path.join(resource_filename("bossingest", "test/data"), "test_tile.png")
+        return os.path.join(resource_filename("ingestclient", "test/data"), "test_tile.png")
 
 
 class TestPassThroughPathProcessor(PathProcessor):

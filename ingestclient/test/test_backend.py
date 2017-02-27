@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import absolute_import
-from bossingest.core.backend import BossBackend, Backend
-from bossingest.test.aws import Setup
+from ingestclient.core.backend import BossBackend, Backend
+from .aws import Setup
 
 import os
 import unittest
@@ -268,12 +268,12 @@ class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        schema_file = os.path.join(resource_filename("bossingest", "schema"), "boss-v0.1-schema.json")
+        schema_file = os.path.join(resource_filename("ingestclient", "schema"), "boss-v0.1-schema.json")
         with open(schema_file, 'r') as file_handle:
             s = json.load(file_handle)
             cls.mock_schema = {"schema": s}
 
-        with open(os.path.join(resource_filename("bossingest", "configs"),
+        with open(os.path.join(resource_filename("ingestclient", "configs"),
                   "boss-v0.1-time-series-example.json"), 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 

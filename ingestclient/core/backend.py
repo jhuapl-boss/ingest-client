@@ -295,7 +295,7 @@ class BossBackend(Backend):
         # Load API credentials from intern if needed.
         if not api_token:
             # First try to load token from ./credentials.json
-            cred_file = os.path.abspath(os.path.join(resource_filename("bossingest", '..'),
+            cred_file = os.path.abspath(os.path.join(resource_filename("ingestclient", '..'),
                                                      self.get_default_token_file_name()))
             if os.path.isfile(cred_file):
                 with open(cred_file, "rt") as cred_handle:

@@ -11,29 +11,16 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.hdf5.Hdf5ChunkPathProcessor",
+      "class": "ingestclient.plugins.catmaid.CatmaidFileImageStackPathProcessor",
       "params": {
         "root_dir": "",
-        "extension": "hdf5",
-        "prefix": "test_data",
-        "x_offset": 0,
-        "y_offset": 0,
-        "z_offset": 0,
-        "x_chunk_size": 512,
-        "y_chunk_size": 512,
-        "z_chunk_size": 260,
-        "use_python_convention": true
+        "filetype": "png"
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.hdf5.Hdf5ChunkTileProcessor",
+      "class": "ingestclient.plugins.catmaid.CatmaidFileImageStackTileProcessor",
       "params": {
-        "filesystem": "local",
-        "bucket": "",
-        "upload_format": "tiff",
-        "z_chunk_size": 260,
-        "data_name": "img",
-        "datatype": "uint8"
+        "filetype": "png"
       }
     }
   },
@@ -45,9 +32,9 @@
   "ingest_job": {
     "resolution": 0,
     "extent": {
-      "x": [0, 1024],
+      "x": [0, 512],
       "y": [0, 1024],
-      "z": [0, 256],
+      "z": [0, 2],
       "t": [0, 1]
     },
     "tile_size": {

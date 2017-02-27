@@ -24,7 +24,7 @@ import numpy as np
 from moto import mock_s3
 import boto3
 
-from bossingest.core.config import Configuration
+from ingestclient.core.config import Configuration
 
 
 class ZImageStackMixin(object):
@@ -63,7 +63,7 @@ class ZImageStackMixin(object):
         test_img = np.array(test_img, dtype="uint8")
 
         # Open original data
-        truth_file = os.path.join(resource_filename("bossingest", "test/data/example_z_stack/"), "3253_my_stack_section000.png")
+        truth_file = os.path.join(resource_filename("ingestclient", "test/data/example_z_stack/"), "3253_my_stack_section000.png")
         truth_img = Image.open(truth_file)
         truth_img = np.array(truth_img, dtype="uint8")
 
@@ -78,7 +78,7 @@ class TestZImageStackLocal(ZImageStackMixin, unittest.TestCase):
         pp = self.config.path_processor_class
         pp.setup(self.config.get_path_processor_params())
 
-        assert pp.parameters["root_dir"] == resource_filename("bossingest", "test/data/example_z_stack")
+        assert pp.parameters["root_dir"] == resource_filename("ingestclient", "test/data/example_z_stack")
         assert pp.parameters["ingest_job"]["extent"]["y"] == [0, 512]
 
     def test_TileProcessor_setup(self):
@@ -92,13 +92,13 @@ class TestZImageStackLocal(ZImageStackMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.config_file = os.path.join(resource_filename("bossingest", "test/data"), "boss-v0.1-zStack.json")
+        cls.config_file = os.path.join(resource_filename("ingestclient", "test/data"), "boss-v0.1-zStack.json")
 
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
         # inject the file path since we don't want to hardcode
-        cls.example_config_data["client"]["path_processor"]["params"]["root_dir"] = resource_filename("bossingest",
+        cls.example_config_data["client"]["path_processor"]["params"]["root_dir"] = resource_filename("ingestclient",
                                                                                                       "test/data/example_z_stack")
 
         cls.config = Configuration(cls.example_config_data)
@@ -128,7 +128,7 @@ class TestZImageStackS3(ZImageStackMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.config_file = os.path.join(resource_filename("bossingest", "test/data"), "boss-v0.1-zStack.json")
+        cls.config_file = os.path.join(resource_filename("ingestclient", "test/data"), "boss-v0.1-zStack.json")
 
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
@@ -157,8 +157,8 @@ class TestZImageStackS3(ZImageStackMixin, unittest.TestCase):
         bucket = s3.Bucket(cls.example_config_data["client"]["tile_processor"]["params"]["bucket"])
 
         # Put images in S3
-        imgs = [os.path.join(resource_filename("bossingest", "test/data/example_z_stack"), "3253_my_stack_section000.png"),
-                os.path.join(resource_filename("bossingest", "test/data/example_z_stack"), "3254_my_stack_section001.png")]
+        imgs = [os.path.join(resource_filename("ingestclient", "test/data/example_z_stack"), "3253_my_stack_section000.png"),
+                os.path.join(resource_filename("ingestclient", "test/data/example_z_stack"), "3254_my_stack_section001.png")]
 
         keys = ["example_z_stack/3253_my_stack_section000.png",
                 "example_z_stack/3254_my_stack_section001.png"]

@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from bossingest.core.engine import Engine
-from bossingest.core.config import ConfigFileError
-from bossingest.core.backend import BossBackend
+from ingestclient.core.engine import Engine
+from ingestclient.core.config import ConfigFileError
+from ingestclient.core.backend import BossBackend
 
 from six.moves import input
 import datetime
@@ -25,8 +25,8 @@ import multiprocessing as mp
 import os
 import time
 import logging
-from bossingest.utils.log import always_log_info
-from bossingest.utils.console import print_estimated_job
+from ingestclient.utils.log import always_log_info
+from ingestclient.utils.console import print_estimated_job
 
 
 def get_confirmation(prompt, force=False):

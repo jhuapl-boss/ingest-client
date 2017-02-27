@@ -11,16 +11,22 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.catmaid.CatmaidFileImageStackPathProcessor",
+      "class": "ingestclient.plugins.hdf5.Hdf5TimeSeriesPathProcessor",
       "params": {
         "root_dir": "",
-        "filetype": "png"
+        "extension": "hdf5",
+        "base_filename": "test_id_slice<o:1>"
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.catmaid.CatmaidFileImageStackTileProcessor",
+      "class": "ingestclient.plugins.hdf5.Hdf5TimeSeriesTileProcessor",
       "params": {
-        "filetype": "png"
+        "filesystem": "local",
+        "bucket": "",
+        "upload_format": "tiff",
+        "channel_index": 0,
+        "scale_factor": 0.0001,
+        "dataset": "aligned"
       }
     }
   },
@@ -32,13 +38,13 @@
   "ingest_job": {
     "resolution": 0,
     "extent": {
-      "x": [0, 2048],
-      "y": [0, 2048],
-      "z": [0, 200],
-      "t": [0, 1]
+      "x": [0, 768],
+      "y": [0, 512],
+      "z": [0, 3],
+      "t": [0, 30]
     },
     "tile_size": {
-      "x": 512,
+      "x": 768,
       "y": 512,
       "z": 1,
       "t": 1

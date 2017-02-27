@@ -11,18 +11,16 @@
       "protocol": "https"
     },
     "path_processor": {
-      "class": "bossingest.plugins.stack.ZindexStackPathProcessor",
+      "class": "ingestclient.plugins.multipage_tiff.SingleTimeTiffPathProcessor",
       "params": {
-        "root_dir": "",
-        "extension": "png",
-        "base_filename": "<o:3253>_my_stack_section<p:3>"
+        "z_0": ""
       }
     },
     "tile_processor": {
-      "class": "bossingest.plugins.stack.ZindexStackTileProcessor",
+      "class": "ingestclient.plugins.multipage_tiff.SingleTimeTiffTileProcessor",
       "params": {
-        "filesystem": "local",
-        "extension": "png"
+        "datatype": "uint16",
+        "filetype": "tif"
       }
     }
   },
@@ -34,13 +32,13 @@
   "ingest_job": {
     "resolution": 0,
     "extent": {
-      "x": [0, 512],
+      "x": [0, 796],
       "y": [0, 512],
-      "z": [0, 2],
-      "t": [0, 1]
+      "z": [0, 1],
+      "t": [0, 1499]
     },
     "tile_size": {
-      "x": 512,
+      "x": 796,
       "y": 512,
       "z": 1,
       "t": 1

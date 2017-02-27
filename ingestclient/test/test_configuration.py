@@ -24,11 +24,11 @@ try:
 except ImportError:
     from unittest import mock
 
-from bossingest.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
-from bossingest.core.validator import BossValidatorV01
-from bossingest.core.backend import BossBackend
-from bossingest.plugins.path import TestPathProcessor
-from bossingest.plugins.tile import TestTileProcessor
+from ingestclient.core.config import Configuration, ConfigPropertyObject, BossConfigurationGenerator
+from ingestclient.core.validator import BossValidatorV01
+from ingestclient.core.backend import BossBackend
+from ingestclient.plugins.path import TestPathProcessor
+from ingestclient.plugins.tile import TestTileProcessor
 
 from pkg_resources import resource_filename
 
@@ -183,7 +183,7 @@ class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
     @responses.activate
     def test_get_backend(self):
         """Test dynamically getting the validator class"""
-        patcher = mock.patch('bossingest.core.backend.BossBackend.get_default_token_file_name')
+        patcher = mock.patch('ingestclient.core.backend.BossBackend.get_default_token_file_name')
         mock_cred_path = patcher.start()
         mock_cred_path.side_effect = token_name_side_effect
 
@@ -196,11 +196,11 @@ class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        schema_file = os.path.join(resource_filename("bossingest", "schema"), "boss-v0.1-schema.json")
+        schema_file = os.path.join(resource_filename("ingestclient", "schema"), "boss-v0.1-schema.json")
         with open(schema_file, 'r') as file_handle:
             cls.schema = json.load(file_handle)
 
-        cls.config_file = os.path.join(resource_filename("bossingest", "test/data"), "boss-v0.1-test.json")
+        cls.config_file = os.path.join(resource_filename("ingestclient", "test/data"), "boss-v0.1-test.json")
 
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)

@@ -191,14 +191,14 @@ There are three operations you can perform with the ingest client - Create, Join
 To enable support for many different ways to organize data and many different types of file formats, plugins are used to convert tile indices to a file handle for uploading.  Some plugins have been initially provided as an example:
 
 - [CATMAID](http://catmaid.readthedocs.io/en/stable/tile_sources.html) File-based image stack
-	- `path_processor``class` = "bossingest.plugins.filesystem.CatmaidFileImageStackPathProcessor"
-	- `tile_processor``class` = "bossingest.plugins.filesystem.CatmaidFileImageStackTileProcessor"
+	- `path_processor``class` = "ingestclient.plugins.filesystem.CatmaidFileImageStackPathProcessor"
+	- `tile_processor``class` = "ingestclient.plugins.filesystem.CatmaidFileImageStackTileProcessor"
 	- An example configuration file using this plugin is `ingest/configs/boss-v0.1-catmaid-file-stack-example.json`
 	- This plugin assumes the data is organized as a CATMAID file-based image stack (type 1 on their docs page). You must provide the `filetype` (e.g. "png") and the `root_dir` as custom parameters
 
 - Multi-page TIFF image 
-	- `path_processor``class` = "bossingest.plugins.multipage_tiff.SingleTimeTiffPathProcessor"
-	- `tile_processor``class` = "bossingest.plugins.multipage_tiff.SingleTimeTiffTileProcessor"
+	- `path_processor``class` = "ingestclient.plugins.multipage_tiff.SingleTimeTiffPathProcessor"
+	- `tile_processor``class` = "ingestclient.plugins.multipage_tiff.SingleTimeTiffTileProcessor"
 	- An example configuration file using this plugin is `/ingest/configs/boss-v0.1-time-series-example.json`
 	- This plugin is for time-series calcium imaging data.  It assumes each z-slice is stored in a single multipage TIFF file where consecutive pages are consecutive time samples.  You must provide custom parameters indicating the `filetype`, `datatype`, and location to each file where the key is "z_<slice_index>" and value is the absolute path. 
 

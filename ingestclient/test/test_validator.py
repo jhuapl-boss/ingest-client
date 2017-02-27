@@ -18,7 +18,7 @@ import unittest
 import jsonschema
 import json
 
-from bossingest.core.validator import Validator, BossValidatorV01
+from ingestclient.core.validator import Validator, BossValidatorV01
 from pkg_resources import resource_filename
 
 
@@ -46,7 +46,7 @@ class BossValidatorV01TestMixin(object):
     def test_validate_bad_schema(self):
         """Method to test validating a bad schema"""
 
-        with open(os.path.join(resource_filename("bossingest", "test/data"), "boss-v0.1-missing-field.json"),
+        with open(os.path.join(resource_filename("ingestclient", "test/data"), "boss-v0.1-missing-field.json"),
                   'rt') as example_file:
             config_data = json.load(example_file)
         v = BossValidatorV01(config_data)
@@ -73,11 +73,11 @@ class TestBossValidatorV01(BossValidatorV01TestMixin, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        schema_file = os.path.join(resource_filename("bossingest", "schema"), "boss-v0.1-schema.json")
+        schema_file = os.path.join(resource_filename("ingestclient", "schema"), "boss-v0.1-schema.json")
         with open(schema_file, 'r') as file_handle:
             cls.schema = json.load(file_handle)
 
-        with open(os.path.join(resource_filename("bossingest", "configs"),
+        with open(os.path.join(resource_filename("ingestclient", "configs"),
                   "boss-v0.1-time-series-example.json"), 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
