@@ -184,7 +184,7 @@ class Engine(object):
 
             status = self.backend.get_job_status(self.ingest_job_id)
             if status:
-                if not last_task_count:
+                if last_task_count is None:
                     last_task_count = status["current_message_count"]
                     continue
 
