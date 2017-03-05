@@ -1,14 +1,12 @@
 from setuptools import setup, find_packages
 from codecs import open
 from os import path
+from ingestclient import __version__
 
 # to update
-# python setup.py sdist
-# python setup.py bdist_wheel
-# twine upload dist/*
+# python setup.py sdist bdist_wheel
+# twine upload --skip-existing dist/*
 
-
-__version__ = '0.9.0'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -27,7 +25,7 @@ setup(
     name='boss-ingest',
     version=__version__,
 
-    description='Ingest client for the BOSS',
+    description='Ingest client for the Boss',
     long_description=long_description,
 
     install_requires=install_requires,
@@ -36,8 +34,19 @@ setup(
     author='Johns Hopkins University Applied Physics Laboratory',
     author_email='iarpamicrons@jhuapl.edu',
 
-    scripts=['boss-ingest'],
-    packages=['ingestclient'],
+    entry_points={
+        'console_scripts': ['boss-ingest=ingestclient.client:main'],
+    },
+    #packages=find_packages('ingestclient'),
+    packages=['ingestclient',
+              'ingestclient.core',
+              'ingestclient.plugins',
+              'ingestclient.utils',
+              'ingestclient.configs',
+              'ingestclient.schema'],
+    package_data={
+        '': ['*.json'],
+    },
     include_package_data=True,
 
     url='https://github.com/jhuapl-boss/ingest-client',

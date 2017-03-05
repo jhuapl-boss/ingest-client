@@ -16,6 +16,9 @@
 from ingestclient.core.engine import Engine
 from ingestclient.core.config import ConfigFileError
 from ingestclient.core.backend import BossBackend
+from ingestclient import check_version
+from ingestclient.utils.log import always_log_info
+from ingestclient.utils.console import print_estimated_job
 
 from six.moves import input
 import datetime
@@ -25,8 +28,6 @@ import multiprocessing as mp
 import os
 import time
 import logging
-from ingestclient.utils.log import always_log_info
-from ingestclient.utils.console import print_estimated_job
 
 
 def get_confirmation(prompt, force=False):
@@ -109,6 +110,10 @@ def main():
     parser.add_argument("--log-level", "-v",
                         default="warning",
                         help="Log level to use: critical, error, warning, info, debug")
+    parser.add_argument("--version",
+                        action="store_true",
+                        default=False,
+                        help="Get the package version")
     parser.add_argument("--cancel", "-c",
                         action="store_true",
                         default=None,
@@ -123,6 +128,11 @@ def main():
     parser.add_argument("config_file", nargs='?', help="Path to the ingest job configuration file")
 
     args = parser.parse_args()
+
+    # Get the version
+    if args.version:
+        check_version()
+        return
 
     # Make sure you have a config file
     if args.config_file is None:
