@@ -57,22 +57,31 @@ def get_confirmation(prompt, force=False):
         return True
 
 
-def worker_process_run(config_file, api_token, job_id, pipe):
+def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=None):
     """A worker process main execution function. Generates an engine, and joins the job
        (that was either created by the main process or joined by it).
        Ends when no more tasks are left that can be executed.
 
     Args:
-        config_file(str): the path to the configuration file to initialize the engine with.
         api_token(str): the token to initialize the engine with.
         job_id(int): the id of the job the engine needs to join with.
         pipe(multiprocessing.Pipe): the receiving end of the pipe that communicates with the master process.
+    Optional args:
+        config_file(str): the path to the configuration file to initialize the engine with.
+        configuration(Configuration): the configuration object to initialize the engine with.
+
     """
 
     always_log_info("Creating new worker process, pid={}.".format(os.getpid()))
     # Create the engine
+    if config_file is None and configuration is None:
+        raise Exception('Must provide either a configuration object or a filename referencing one')
+
     try:
-        engine = Engine(config_file, api_token, job_id)
+        engine = Engine(config_file=config_file, 
+                        configuration=configuration,
+                        backend_api_token=api_token, 
+                        ingest_job_id=job_id)
     except ConfigFileError as err:
         print("ERROR (pid: {}): {}".format(os.getpid(), err))
         sys.exit(1)
@@ -129,9 +138,13 @@ def get_parser():
 
     return parser
 
-def main():
-    parser = get_parser()
-    args = parser.parse_args()
+def main(configuration=None, parser_args=None):
+    
+    if parser_args is None:
+        parser = get_parser()
+        args = parser.parse_args()
+    else:
+        args = parser_args
 
     # Get the version
     if args.version:
@@ -139,7 +152,7 @@ def main():
         return
 
     # Make sure you have a config file
-    if args.config_file is None:
+    if args.config_file is None and configuration is None:
         if args.cancel:
             # If no config is provided and you are deleting, the client defaults to the production Boss stack
             boss_backend_params = {"client": {
@@ -193,7 +206,10 @@ def main():
 
     # Create an engine instance
     try:
-        engine = Engine(args.config_file, args.api_token, args.job_id)
+        engine = Engine(config_file=args.config_file, 
+                        backend_api_token=args.api_token, 
+                        ingest_job_id=args.job_id, 
+                        configuration=configuration)
     except ConfigFileError as err:
         print("ERROR: {}".format(err))
         sys.exit(1)
@@ -218,7 +234,7 @@ def main():
         # Trying to create or join an ingest
         if args.job_id is None:
             # Creating a new session - make sure the user wants to do this.
-            print_estimated_job(args.config_file)
+            print_estimated_job(config_file=args.config_file, configuration=configuration)
             print("\n")
             if not get_confirmation("Would you like to create a NEW ingest job?", args.force):
                 # Don't want to create a new job
@@ -260,8 +276,10 @@ def main():
     workers = []
     for i in range(args.processes_nb):
         new_pipe = mp.Pipe(False)
-        new_process = mp.Process(target=worker_process_run, args=(args.config_file, args.api_token,
-                                                                  engine.ingest_job_id, new_pipe[0]))
+        new_process = mp.Process(target=worker_process_run, 
+                                 args=(args.api_token, engine.ingest_job_id, new_pipe[0]),
+                                 kwargs={'config_file': args.config_file, 'configuration': configuration}
+                                 )
         workers.append((new_process, new_pipe[1]))
         new_process.start()
 

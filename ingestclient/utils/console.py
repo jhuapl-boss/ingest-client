@@ -4,18 +4,24 @@ from .log import always_log_info
 import pprint
 
 
-def print_estimated_job(config_file):
+def print_estimated_job(config_file=None, configuration=None):
     """Method to print details about the job the user is about to start
 
-    Args:
+    Kwd Args:
         config_file(str): Path to the config file
+        configuration(Configuration): Configuration object
 
     Returns:
         None
     """
-    # Load file
-    with open(config_file, 'rt') as cf:
-        config = json.load(cf)
+    if config_file is not None:
+        # Load file
+        with open(config_file, 'rt') as cf:
+            config = json.load(cf)
+    elif configuration is not None:
+        config = configuration.config_data
+    else:
+        raise Exception('Must provide either a configuration object or a filename referencing one')
 
     # Compute number of tiles
     num_tiles = (config["ingest_job"]["extent"]["x"][1] * config["ingest_job"]["extent"]["y"][1]) / (config["ingest_job"]["tile_size"]["x"] * config["ingest_job"]["tile_size"]["y"])
