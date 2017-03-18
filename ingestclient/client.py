@@ -93,7 +93,7 @@ def worker_process_run(config_file, api_token, job_id, pipe):
     always_log_info("  - Process pid={} finished gracefully.".format(os.getpid()))
     
 
-def main():
+def get_parser():
     parser = argparse.ArgumentParser(description="Client for facilitating large-scale data ingest",
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      epilog="Visit https://docs.theBoss.io for more details")
@@ -127,6 +127,10 @@ def main():
                         help="The number of client processes that will upload the images of the ingest job.")
     parser.add_argument("config_file", nargs='?', help="Path to the ingest job configuration file")
 
+    return parser
+
+def main():
+    parser = get_parser()
     args = parser.parse_args()
 
     # Get the version
