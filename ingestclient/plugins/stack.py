@@ -151,7 +151,24 @@ class ZindexStackTileProcessor(TileProcessor):
         tile_data = Image.open(file_handle)
         upload_img = tile_data.crop((x_range[0], y_range[0], x_range[1], y_range[1]))
         output = six.BytesIO()
-        upload_img.save(output, format=self.parameters["extension"].upper())
+        upload_img.save(output, format=canonical_extension(self.parameters["extension"]))
 
         # Send handle back
         return output
+
+EXTENSIONS =  {
+    'TIFF': ['TIF', 'TIFF'],
+    'JPG' : ['JPG', 'JPEG']
+}
+
+def canonical_extension(extension):
+    '''
+    Given an alternatively spelled extension (e.g. tif), return the canonical form (e.g. TIFF)
+    Must be one of the values in Image.SAVE.
+    see: http://pillow.readthedocs.io/en/3.1.x/handbook/image-file-formats.html
+    '''
+    for (key, spellings) in EXTENSIONS.items():
+        if extension.upper() in spellings:
+            return key
+    return extension.upper()
+    

@@ -25,7 +25,7 @@ from collections import deque
 
 
 class Engine(object):
-    def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None):
+    def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None):
         """
         A class to implement the core upload client workflow engine
 
@@ -53,10 +53,12 @@ class Engine(object):
         self.job_params = None
         self.tile_count = 0
 
-        if config_file:
-            self.load_configuration(config_file)
+        if configuration:
+            self.configure(configuration)
+        elif config_file:
+            self.configure_from_file(config_file)
 
-    def load_configuration(self, config_file):
+    def configure_from_file(self, config_file):
         """
         Method to load a configuration file and setup the workflow engine
         Args:
@@ -81,8 +83,20 @@ class Engine(object):
             raise ConfigFileError(
                 "Ingest Configuration File not found.  Double check the provided path: {}".format(config_file))
 
+        self.configure(Configuration(config_data))
+
+    def configure(self, configuration):
+        """
+        Method to apply a configuration and setup the workflow engine
+        Args:
+            configuration (Configuration)
+
+        Returns:
+            None
+        """
+
         # Load Config file and validate
-        self.config = Configuration(config_data)
+        self.config = configuration
         self.config.load_plugins()
 
         # Get backend
