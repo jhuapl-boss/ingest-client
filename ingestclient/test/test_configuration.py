@@ -34,7 +34,7 @@ from pkg_resources import resource_filename
 
 
 def token_name_side_effect():
-    return "token.json.example"
+    return {"INTERN_TOKEN": "adlsfjadsf"}
 
 
 class TestConfigPropertyObject(unittest.TestCase):
@@ -181,12 +181,13 @@ class ConfigurationTestMixin(object):
 class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
 
     @responses.activate
-    def test_get_backend(self):
+    @mock.patch.dict(os.environ, {"INTERN_TOKEN": "adlsfjadsf"})
+    def test_get_backend_env_var(self):
         """Test dynamically getting the validator class"""
         config = Configuration(self.example_config_data)
 
         b = config.get_backend()
-        b.setup(self.api_token)
+        b.setup()
 
         assert isinstance(b, BossBackend)
 

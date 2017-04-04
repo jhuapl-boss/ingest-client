@@ -96,7 +96,22 @@ class Backend(object):
         Method to cancel an ingest job
 
         Args:
-            ingest_job_id(int): The ID of the job you'd like to resume processing
+            ingest_job_id(int): The ID of the job you'd like to cancel
+
+        Returns:
+            None
+
+
+        """
+        return NotImplemented
+
+    @abstractmethod
+    def complete(self, ingest_job_id):
+        """
+        Method to complete an ingest job
+
+        Args:
+            ingest_job_id(int): The ID of the job you'd like to complete
 
         Returns:
             None
@@ -398,13 +413,32 @@ class BossBackend(Backend):
                             headers=self.api_headers, verify=self.validate_ssl)
 
         if r.status_code != 204:
-            raise Exception("Failed to cancel ingest job.")
+            raise Exception("Failed to cancel ingest job: {}".format(r.json()))
+
+    def complete(self, ingest_job_id):
+        """
+        Method to complete an ingest job
+
+        Args:
+            ingest_job_id(int): The ID of the job you'd like to complete
+
+        Returns:
+            None
+
+
+        """
+        r = requests.post('{}/{}/ingest/{}/complete'.format(self.host, self.api_version, ingest_job_id),
+                          headers=self.api_headers, verify=self.validate_ssl)
+
+        if r.status_code != 204:
+            raise Exception("Failed to complete ingest job: {}".format(r.json()))
 
     def get_task(self, num_messages=1):
         """
         Method to get an upload task
 
         Args:
+            num_messages(int): Number of messages to pop off the upload task queue
 
         Returns:
             (str, str, dict): message_id, receipt_handle, message contents

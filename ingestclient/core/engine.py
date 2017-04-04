@@ -178,6 +178,19 @@ class Engine(object):
         """
         self.backend.cancel(self.ingest_job_id)
 
+    def complete(self):
+        """
+        Method to complete an ingest job
+
+        Args:
+
+        Returns:
+            None
+
+
+        """
+        self.backend.complete(self.ingest_job_id)
+
     def monitor(self, workers):
         """Method to monitor the progress of the ingest job
 

@@ -131,6 +131,10 @@ def get_parser():
                         action="store_true",
                         default=False,
                         help="Flag indicating if you'd like ignore all confirmation prompts.")
+    parser.add_argument("--manual-complete", "-m",
+                        action="store_true",
+                        default=False,
+                        help="Flag indicating if you want to manually mark an Ingest Job for completion. If omitted, the client will automatically cleanup after a successful upload")
     parser.add_argument("--processes_nb", "-p", type=int,
                         default=1,
                         help="The number of client processes that will upload the images of the ingest job.")
@@ -323,18 +327,24 @@ def main(configuration=None, parser_args=None):
             for _, worker_pipe in workers:
                 worker_pipe.send(should_run)
 
-    always_log_info("Waiting for worker processes to close...")
+    always_log_info("Waiting for worker processes to close...\n")
     time.sleep(1)  # Make sure workers have cleaned up
     for worker_process, worker_pipe in workers:
         worker_process.join()
         worker_pipe.close()
 
     if job_complete:
-        always_log_info("Job Complete - No more tasks remaining.")
-        always_log_info("Upload finished after {} minutes.".format((time.time() - start_time) / 60))
+        # If auto-complete, mark the job as complete and cleanup
+        always_log_info("All upload tasks completed in {:.2f} minutes.".format((time.time() - start_time) / 60))
+        if not args.manual_complete:
+            always_log_info(" - Marking Ingest Job as complete and cleaning up. Please wait.")
+            engine.complete()
+            always_log_info(" - Cleanup Done")
+        else:
+            always_log_info(" - Auto-complete disabled. This ingest job will remain in the 'Uploading' state until you manually mark it as complete")
     else:
         always_log_info("Client exiting")
-        always_log_info("Run time: {} minutes.".format((time.time() - start_time) / 60))
+        always_log_info("Run time: {:.2f} minutes.".format((time.time() - start_time) / 60))
 
 
 if __name__ == '__main__':
