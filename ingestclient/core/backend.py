@@ -269,15 +269,6 @@ class BossBackend(Backend):
         self.validate_ssl = True
         self.credential_timeout = 3300  # Currently credentials expire in 1 hr, so renew after 55 minutes
 
-    def get_default_token_file_name(self):
-        """A method to return the default token file name. A method so it can be mocked.
-
-        Returns:
-            (str): Name of the default token file
-
-        """
-        return "token.json"
-
     def setup(self, api_token=None):
         """
         Method to configure the backend based on configuration parameters in the config file

@@ -183,10 +183,6 @@ class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
     @responses.activate
     def test_get_backend(self):
         """Test dynamically getting the validator class"""
-        patcher = mock.patch('ingestclient.core.backend.BossBackend.get_default_token_file_name')
-        mock_cred_path = patcher.start()
-        mock_cred_path.side_effect = token_name_side_effect
-
         config = Configuration(self.example_config_data)
 
         b = config.get_backend()

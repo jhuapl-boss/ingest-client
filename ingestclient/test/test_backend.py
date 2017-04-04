@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import absolute_import
 from ingestclient.core.backend import BossBackend, Backend
-from .aws import Setup
+from ingestclient.test.aws import Setup
 
 import os
 import unittest
