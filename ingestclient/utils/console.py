@@ -21,11 +21,16 @@ def print_estimated_job(config_file=None, configuration=None):
     elif configuration is not None:
         config = configuration.config_data
     else:
-        raise Exception('Must provide either a configuration object or a filename referencing one')
+        raise Exception('Must provide either a configuration object or an absolute path to a config file')
 
     # Compute number of tiles
-    num_tiles = (config["ingest_job"]["extent"]["x"][1] * config["ingest_job"]["extent"]["y"][1]) / (config["ingest_job"]["tile_size"]["x"] * config["ingest_job"]["tile_size"]["y"])
-    num_tiles = num_tiles * config["ingest_job"]["extent"]["z"][1] * config["ingest_job"]["extent"]["t"][1]
+    num_x_tiles = config["ingest_job"]["extent"]["x"][1] - config["ingest_job"]["extent"]["x"][0]
+    num_y_tiles = config["ingest_job"]["extent"]["y"][1] - config["ingest_job"]["extent"]["y"][0]
+    num_z_tiles = config["ingest_job"]["extent"]["z"][1] - config["ingest_job"]["extent"]["z"][0]
+    num_t_tiles = config["ingest_job"]["extent"]["t"][1] - config["ingest_job"]["extent"]["t"][0]
+
+    num_tiles = (num_x_tiles * num_y_tiles) / (config["ingest_job"]["tile_size"]["x"] * config["ingest_job"]["tile_size"]["y"])
+    num_tiles = num_tiles * num_z_tiles * num_t_tiles
 
     # Build Message
     pp = pprint.PrettyPrinter(indent=2)
@@ -69,6 +74,3 @@ class WaitPrinter(object):
             print(msg)
         else:
             print("Complete")
-
-
-##class WorkTracker(object)

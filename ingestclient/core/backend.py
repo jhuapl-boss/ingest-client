@@ -292,32 +292,24 @@ class BossBackend(Backend):
         self.host = "{}://{}".format(self.config["client"]["backend"]["protocol"],
                                      self.config["client"]["backend"]["host"])
 
-        # Load API credentials from intern if needed.
+        # If API token not provided, load API credentials from intern locations as needed.
         if not api_token:
-            # First try to load token from ./credentials.json
-            cred_file = os.path.abspath(os.path.join(resource_filename("ingestclient", '..'),
-                                                     self.get_default_token_file_name()))
-            if os.path.isfile(cred_file):
-                with open(cred_file, "rt") as cred_handle:
-                    cred_data = json.load(cred_handle)
-                    api_token = cred_data["token"]
+            # Try environment var
+            if "INTERN_TOKEN" in os.environ:
+                api_token = os.environ["INTERN_TOKEN"]
             else:
-                # Then try env
-                if "INTERN_TOKEN" in os.environ:
-                    api_token = os.environ["INTERN_TOKEN"]
-                else:
-                    # Try to see if intern config file is setup
-                    try:
-                        cfg_parser = configparser.ConfigParser()
-                        cfg_parser.read(os.path.expanduser("~/.intern/intern.cfg"))
-                        if "Default" in cfg_parser.sections():
-                            api_token = cfg_parser.get("Default", "token")
-                        elif "Project Service" in cfg_parser.sections():
-                            api_token = cfg_parser.get("Project Service", "token")
-                        else:
-                            raise ValueError("Could not load config from ~/.intern/intern.cfg")
-                    except KeyError as e:
-                        print("API Token not provided. Failed to setup backend: {}".format(e))
+                # Try to see if intern config file is setup
+                try:
+                    cfg_parser = configparser.ConfigParser()
+                    cfg_parser.read(os.path.expanduser("~/.intern/intern.cfg"))
+                    if "Default" in cfg_parser.sections():
+                        api_token = cfg_parser.get("Default", "token")
+                    elif "Project Service" in cfg_parser.sections():
+                        api_token = cfg_parser.get("Project Service", "token")
+                    else:
+                        raise ValueError("Could not load config from ~/.intern/intern.cfg")
+                except KeyError as e:
+                    print("API Token not provided. Failed to setup backend: {}".format(e))
 
         self.api_headers = {'Authorization': 'Token ' + api_token, 'Accept': 'application/json',
                             'content-type': 'application/json'}

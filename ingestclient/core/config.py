@@ -23,6 +23,7 @@ import os
 from .validator import Validator
 from .backend import Backend
 
+
 @six.python_2_unicode_compatible
 class ConfigPropertyObject(object):
     def __init__(self, name, data=None, help_str=None, description=None):

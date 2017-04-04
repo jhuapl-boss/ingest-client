@@ -35,6 +35,7 @@ def get_confirmation(prompt, force=False):
 
     Args:
         prompt(str): Question to ask the user
+        force(bool): Flag indicating if user prompts should be ignored
 
     Returns:
         (bool): True indicating yes, False indicating no
@@ -66,16 +67,15 @@ def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=
         api_token(str): the token to initialize the engine with.
         job_id(int): the id of the job the engine needs to join with.
         pipe(multiprocessing.Pipe): the receiving end of the pipe that communicates with the master process.
-    Optional args:
-        config_file(str): the path to the configuration file to initialize the engine with.
-        configuration(Configuration): the configuration object to initialize the engine with.
+        config_file(str): the path to the configuration file (configuration required if omitted)
+        configuration(Configuration): a pre-loaded configuration object (config_file required if omitted)
 
     """
-
     always_log_info("Creating new worker process, pid={}.".format(os.getpid()))
+
     # Create the engine
     if config_file is None and configuration is None:
-        raise Exception('Must provide either a configuration object or a filename referencing one')
+        raise Exception('Must provide either a configuration instance or a configuration file')
 
     try:
         engine = Engine(config_file=config_file, 
@@ -138,10 +138,19 @@ def get_parser():
 
     return parser
 
+
 def main(configuration=None, parser_args=None):
-    
+    """Client UI main
+
+    Args:
+        configuration(ingestclient.core.config.Configuration): A pre-loaded configuration instance
+        parser_args(argparse.ArgumentParser): A pre-loaded ArgumentParser instance
+
+    Returns:
+
+    """
+    parser = get_parser()
     if parser_args is None:
-        parser = get_parser()
         args = parser.parse_args()
     else:
         args = parser_args

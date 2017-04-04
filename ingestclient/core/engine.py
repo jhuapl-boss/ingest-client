@@ -33,7 +33,7 @@ class Engine(object):
             config_file (str): Absolute path to a config file
             ingest_job_id (int): ID of the ingest job you want to work on
             backend_api_token (str): The authorization token for the Backend if used
-
+            configuration(ingestclient.core.config.Configuration): A pre-loaded configuration instance
         """
         self.config = None
         self.msg_wait_iterations = 20  # Each iteration waits for 10 seconds for incoming messages

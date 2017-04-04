@@ -46,15 +46,16 @@ There are three ways to provide your API token to the ingest client.  The ingest
 1. **Via command line arguments**
 	- You can directly pass your token to the ingest client when starting it from the command line. See the *Usage* section below.
 
-2. **Via the intern configuration file**
-	- If you have already installed [intern](https://github.com/jhuapl-boss/intern) and added your API token to its configuration file, the ingest client will automatically load the token
-
-3. **Via the intern environment variables**
+2. **Via the intern environment variables**
 	- The ingest client can also reuse environment variables used to configure _intern_ to set your API token
-	
+
 	```
 	  export INTERN_TOKEN=<you_token_here>
 	```
+
+3. **Via the intern configuration file**
+	- If you have already installed [intern](https://github.com/jhuapl-boss/intern) and added your API token to its configuration file, the ingest client will automatically load the token
+
 
 ## Usage
 
@@ -122,7 +123,7 @@ There are three primary operations you can perform with the ingest client: Creat
 		```
 
 - **Logging**
-	-   You can choose where to write the log file by specifying and absolute file path suing the -l parameter. If ommitted, data is logged in `<package_root>/logs`
+	-   You can choose where to write the log file by specifying and absolute file path suing the -l parameter. If omitted, data is logged in `~/.boss-ingest`
 
 		```
 		boss-ingest <absolute_path_to_config_file> --log-file <absolute_filename>
