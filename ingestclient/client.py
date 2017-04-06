@@ -297,7 +297,7 @@ def main(configuration=None, parser_args=None):
         new_process.start()
 
         # Sleep to slowly ramp up load on lambda
-        time.sleep(.25)
+        time.sleep(.5)
 
     # Start the main process engine
     start_time = time.time()
