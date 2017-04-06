@@ -378,6 +378,11 @@ class BossBackend(Backend):
                 else:
                     wp.finished()
                     creds = result["credentials"]
+
+                    # Add check to make sure valid credentials came back. If not, try again
+                    if not creds:
+                        continue
+
                     queue = result["ingest_job"]["upload_queue"]
                     tile_bucket = result["tile_bucket_name"]
                     num_tiles = result["ingest_job"]["tile_count"]
