@@ -110,6 +110,20 @@ There are three primary operations you can perform with the ingest client: Creat
 		boss-ingest <absolute_path_to_config_file> -c -j <ingest_job_id>
 		```
 
+- **Completing an Ingest Job**
+	-	The ingest client now automatically "completes" an ingest job when the upload queue has been completely processed. This operation will ensure that all data has made it into the Boss, clean up temporary resources that have been provisioned by the Boss, and update the status of the ingest job. Note, it can take 5-60 seconds to finish completing a job. 
+
+		If you do **not** want the client to automatically compete the job for you, you can add a flag to disable this functionality, as shown below 
+
+		```
+		boss-ingest <absolute_path_to_config_file> --manual-complete
+		```
+		or
+		
+		```
+		boss-ingest  <absolute_path_to_config_file> -m
+		```
+ 
 - **Multiprocessing**
 	-  You can choose to have multiple upload engines start in parallel processes by setting the `-p` argument as outlined in the example below. (Default number of upload processes = 1)
 
