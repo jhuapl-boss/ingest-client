@@ -280,7 +280,7 @@ class BossBackend(Backend):
         self.host = None
         self.api_headers = None
         Backend.__init__(self, config)
-        self.api_version = "v0.8"
+        self.api_version = "latest"
         self.validate_ssl = True
         self.credential_timeout = 3300  # Currently credentials expire in 1 hr, so renew after 55 minutes
 
