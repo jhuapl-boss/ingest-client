@@ -327,7 +327,7 @@ class Engine(object):
                                                           Metadata={
                                                               'message_id': message_id,
                                                               'receipt_handle': receipt_handle,
-                                                              'metadata': json.dumps(metadata)
+                                                              'metadata': json.dumps(metadata, separators=(',', ':'))
                                                           },
                                                           StorageClass='STANDARD')
                 logger.info("(pid={}) Successfully wrote file: {}".format(os.getpid(), response.key))
