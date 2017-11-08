@@ -275,8 +275,20 @@ class Engine(object):
             raise Exception(msg)
 
         # Do some work
+        self.access_denied = False
+        self.access_denied_count = 0
+        self.invalid_access_key = False
+        self.invalid_access_key_count = 0
+
         wait_cnt = 0
         while True:
+            if self.access_denied:
+                self.access_denied = False
+                self.credential_create_time = datetime.datetime.min
+            if self.invalid_access_key:
+                self.invalid_access_key = False
+                if self.invalid_access_key_count % 5 == 4:
+                    self.credential_create_time = datetime.datetime.min
             # Check if you need to renew credentials
             if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
                 logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(os.getpid()))
@@ -339,4 +351,17 @@ class Engine(object):
                                                                                          key_parts["z_index"],
                                                                                          key_parts["t_index"],
                                                                                          e))
+                if str(e).startswith("An error occurred (AccessDenied) when calling the PutObject operation"):
+                    self.access_denied = True
+                    self.access_denied_count += 1
+                    if self.access_denied_count >= 20:
+                        break
+                elif str(e).startswith("An error occurred (InvalidAccessKeyId) when calling the PutObject operation: The AWS Access Key Id you provided does not exist in our records"):
+                    time.sleep(5)
+                    self.invalid_access_key = True
+                    self.invalid_access_key_count += 1
+                    if self.invalid_access_key_count >= 20:
+                        break
+
+
 
