@@ -355,12 +355,14 @@ class Engine(object):
                     self.access_denied = True
                     self.access_denied_count += 1
                     if self.access_denied_count >= 20:
+                        logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(os.getpid(), e))
                         break
                 elif str(e).startswith("An error occurred (InvalidAccessKeyId) when calling the PutObject operation: The AWS Access Key Id you provided does not exist in our records"):
                     time.sleep(5)
                     self.invalid_access_key = True
                     self.invalid_access_key_count += 1
                     if self.invalid_access_key_count >= 20:
+                        logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(os.getpid(), e))
                         break
 
 
