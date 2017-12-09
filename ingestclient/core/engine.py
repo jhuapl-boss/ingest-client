@@ -52,6 +52,10 @@ class Engine(object):
         self.tile_bucket = None
         self.job_params = None
         self.tile_count = 0
+        self.access_denied = False
+        self.access_denied_count = 0
+        self.invalid_access_key = False
+        self.invalid_access_key_count = 0
 
         if configuration:
             self.configure(configuration)
@@ -204,8 +208,10 @@ class Engine(object):
         print_time = time.time()
         avg_tile_rate = 0
         while True:
-            if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
-                logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(os.getpid()))
+            total_seconds = (datetime.datetime.now() - self.credential_create_time).total_seconds()
+            if total_seconds > self.backend.credential_timeout:
+                logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(
+                    os.getpid()))
                 self.join()
                 always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
 
@@ -231,10 +237,12 @@ class Engine(object):
                         log_str += " - Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60)
                         always_log_info(log_str)
                     else:
-                        always_log_info("Waiting to ensure all upload tasks have been processed. Just a few minutes longer...")
+                        always_log_info(
+                            "Waiting to ensure all upload tasks have been processed. Just a few minutes longer...")
 
                 else:
-                    always_log_info("Uploading in progress: Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60))
+                    always_log_info("Uploading in progress: Elapsed time {:.2f} minutes".format(
+                        (time.time() - start_time) / 60))
 
             # Wait to loop
             time.sleep(10)
@@ -290,8 +298,10 @@ class Engine(object):
                 if self.invalid_access_key_count % 5 == 4:
                     self.credential_create_time = datetime.datetime.min
             # Check if you need to renew credentials
-            if (datetime.datetime.now() - self.credential_create_time).total_seconds() > self.backend.credential_timeout:
-                logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(os.getpid()))
+            total_seconds = (datetime.datetime.now() - self.credential_create_time).total_seconds()
+            if total_seconds > self.backend.credential_timeout:
+                logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(
+                    os.getpid()))
                 self.join()
                 always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
 
@@ -355,15 +365,14 @@ class Engine(object):
                     self.access_denied = True
                     self.access_denied_count += 1
                     if self.access_denied_count >= 20:
-                        logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(os.getpid(), e))
+                        logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(
+                            os.getpid(), e))
                         break
-                elif str(e).startswith("An error occurred (InvalidAccessKeyId) when calling the PutObject operation: The AWS Access Key Id you provided does not exist in our records"):
+                elif str(e).startswith("An error occurred (InvalidAccessKeyId) when calling the PutObject operation"):
                     time.sleep(5)
                     self.invalid_access_key = True
                     self.invalid_access_key_count += 1
                     if self.invalid_access_key_count >= 20:
-                        logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(os.getpid(), e))
+                        logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(
+                            os.getpid(), e))
                         break
-
-
-
