@@ -164,9 +164,6 @@ def main(configuration=None, parser_args=None):
         check_version()
         return
 
-    # TODO Remove this line before committing to production
-    print("Running ingest-client stress-test-bugfix version.")
-
     # Make sure you have a config file
     if args.config_file is None and configuration is None:
         if args.cancel:
