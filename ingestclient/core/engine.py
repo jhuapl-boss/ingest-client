@@ -237,12 +237,13 @@ class Engine(object):
                         log_str += " - Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60)
                         always_log_info(log_str)
                     else:
-                        always_log_info(
-                            "Waiting to ensure all upload tasks have been processed. Just a few minutes longer...")
+                        log_str = "Waiting to ensure all upload tasks have been processed. Just a few minutes longer..."
+                        always_log_info(log_str)
 
                 else:
-                    always_log_info("Uploading in progress: Elapsed time {:.2f} minutes".format(
-                        (time.time() - start_time) / 60))
+                    log_str = "Uploading in progress: Elapsed time {:.2f} minutes"
+                    log_str = log_str.format((time.time() - start_time) / 60)
+                    always_log_info()
 
             # Wait to loop
             time.sleep(10)
