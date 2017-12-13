@@ -297,6 +297,8 @@ class Engine(object):
             if self.invalid_access_key:
                 self.invalid_access_key = False
                 if self.invalid_access_key_count % 5 == 4:
+                    # We check for a few times before setting the credentials to be renewed
+                    # because it is possible these are new credentials that have not become valid yet.
                     self.credential_create_time = datetime.datetime.min
             # Check if you need to renew credentials
             total_seconds = (datetime.datetime.now() - self.credential_create_time).total_seconds()
