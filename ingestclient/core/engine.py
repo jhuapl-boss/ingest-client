@@ -300,47 +300,47 @@ class Engine(object):
                     # We check for a few times before setting the credentials to be renewed
                     # because it is possible these are new credentials that have not become valid yet.
                     self.credential_create_time = datetime.datetime.min
-                # Check if you need to renew credentials
+            # Check if you need to renew credentials
             total_seconds = (datetime.datetime.now() - self.credential_create_time).total_seconds()
             if total_seconds > self.backend.credential_timeout:
                 logger.warning("(pid={}) Credentials are expiring soon, attempting to renew credentials".format(
                     os.getpid()))
-                    self.join()
-                    always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
+                self.join()
+                always_log_info("(pid={}) Credentials refreshed successfully".format(os.getpid()))
 
-                # Get a task
-                message_id, receipt_handle, msg = self.backend.get_task()
+            # Get a task
+            message_id, receipt_handle, msg = self.backend.get_task()
 
-                if not msg:
-                    time.sleep(10)
-                    wait_cnt += 1
-                    if wait_cnt < self.msg_wait_iterations:
-                        continue
-                    else:
-                        break
+            if not msg:
+                time.sleep(10)
+                wait_cnt += 1
+                if wait_cnt < self.msg_wait_iterations:
+                    continue
+                else:
+                    break
 
-                wait_cnt = 0
+            wait_cnt = 0
+            key_parts = self.backend.decode_tile_key(msg['tile_key'])
+            logger.info("(pid={}) Processing Task -  X:{} Y:{} Z:{} T:{}".format(os.getpid(),
+                                                                                 key_parts["x_index"],
+                                                                                 key_parts["y_index"],
+                                                                                 key_parts["z_index"],
+                                                                                 key_parts["t_index"]))
 
-                key_parts = self.backend.decode_tile_key(msg['tile_key'])
-                logger.info("(pid={}) Processing Task -  X:{} Y:{} Z:{} T:{}".format(os.getpid(),
-                                                                                     key_parts["x_index"],
-                                                                                     key_parts["y_index"],
-                                                                                     key_parts["z_index"],
-                                                                                     key_parts["t_index"]))
+            # Call path processor
+            filename = self.path_processor.process(key_parts["x_index"],
+                                                   key_parts["y_index"],
+                                                   key_parts["z_index"],
+                                                   key_parts["t_index"])
 
-                # Call path processor
-                filename = self.path_processor.process(key_parts["x_index"],
-                                                       key_parts["y_index"],
-                                                       key_parts["z_index"],
-                                                       key_parts["t_index"])
+            # Call tile processor
+            handle = self.tile_processor.process(filename,
+                                                 key_parts["x_index"],
+                                                 key_parts["y_index"],
+                                                 key_parts["z_index"],
+                                                 key_parts["t_index"])
 
-                # Call tile processor
-                handle = self.tile_processor.process(filename,
-                                                     key_parts["x_index"],
-                                                     key_parts["y_index"],
-                                                     key_parts["z_index"],
-                                                     key_parts["t_index"])
-
+            try:
                 metadata = {'chunk_key': msg['chunk_key'],
                             'ingest_job': self.ingest_job_id,
                             'parameters': self.job_params,
