@@ -81,13 +81,14 @@ class QueueRecovery(object):
         # Invoke Ingest lambda functions
         lambda_client = boto3.client('lambda', region_name="us-east-1")
         cnt = 0
+        throttle_count = 30
         for _ in num_invocations:
             lambda_client.invoke(FunctionName=metadata["parameters"]["ingest_lambda"],
                                  InvocationType='Event',
                                  Payload=json.dumps(metadata).encode())
             cnt += 1
-            if cnt > 30:
-                print("Invoked 30...throttling...")
+            if cnt >= throttle_count:
+                print("Invoked {}...throttling...".format(throttle_count))
                 time.sleep(5)
                 cnt = 0
 
