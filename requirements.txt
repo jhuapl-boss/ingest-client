@@ -7,3 +7,5 @@ moto==0.4.25
 Pillow>=3.3.1
 numpy==1.11.1
 nose2==0.6.5
+intern>=0.9.6
+

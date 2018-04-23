@@ -19,6 +19,7 @@ import os
 
 from .path import PathProcessor
 from .tile import TileProcessor
+import math
 
 
 class CatmaidFileImageStackZoomLevelPathProcessor(PathProcessor):
@@ -56,13 +57,17 @@ class CatmaidFileImageStackZoomLevelPathProcessor(PathProcessor):
             raise IndexError("CATMAID File Image Stack format does not support non-zero time index")
 
         if z_index < self.parameters["ingest_job"]["extent"]["z"][0] or z_index >= self.parameters["ingest_job"]["extent"]["z"][1]:
-            raise IndexError("Invalid Tile Z-Index: {}".format(z_index))
+            raise IndexError("Invalid Tile Z-Index: {} Z-Extent: {}".format(z_index, self.parameters["ingest_job"]["extent"]["z"][1]))
 
         if x_index > self.parameters["ingest_job"]["extent"]["x"][1] / self.parameters["ingest_job"]["tile_size"]["x"] - 1:
-            raise IndexError("Invalid Tile X-Index: {}".format(x_index))
+            raise IndexError("Invalid Tile X-Index: {} X-Extent: {} X-TileSize: {}".format(x_index,
+                                                                                           self.parameters["ingest_job"]["extent"]["x"][1],
+                                                                                           self.parameters["ingest_job"]["tile_size"]["x"]))
 
         if y_index > self.parameters["ingest_job"]["extent"]["y"][1] / self.parameters["ingest_job"]["tile_size"]["y"] - 1:
-            raise IndexError("Invalid Tile Y-Index: {}".format(y_index))
+            raise IndexError("Invalid Tile Y-Index: {} Y-Extent: {} Y-TileSize: {}".format(y_index,
+                                                                                           self.parameters["ingest_job"]["extent"]["y"][1],
+                                                                                           self.parameters["ingest_job"]["tile_size"]["y"]))
 
         filename = "{}_{}.{}".format(y_index, x_index, self.parameters["filetype"])
         return os.path.join(self.parameters["root_dir"], "{}".format(self.parameters["ingest_job"]["resolution"]), "{}".format(z_index), filename)
@@ -283,7 +288,10 @@ class CatmaidFileImageStackTileProcessor(TileProcessor):
         tile_data = Image.open(file_path)
 
         output = six.BytesIO()
+        print("Format = " + self.parameters["filetype"].upper())
         tile_data.save(output, format=self.parameters["filetype"].upper())
+
+        
 
         # Send handle back
         return output

@@ -23,6 +23,7 @@ import time
 import botocore
 from pkg_resources import resource_filename
 import os
+import pprint
 
 from ..utils import WaitPrinter
 from ..utils.log import always_log_info
@@ -377,6 +378,7 @@ class BossBackend(Backend):
                     time.sleep(5)
                 else:
                     wp.finished()
+                    pprint.pprint(result)
                     creds = result["credentials"]
 
                     # Add check to make sure valid credentials came back. If not, try again
@@ -458,7 +460,7 @@ class BossBackend(Backend):
                 try_cnt += 1
                 time.sleep(15)
 
-                if try_cnt >= 20:
+                if try_cnt >= 19:
                     raise Exception("(pid={}) Credentials failed to be come valid".format(os.getpid()))
 
         if msg:
