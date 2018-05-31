@@ -460,7 +460,7 @@ class BossBackend(Backend):
                 try_cnt += 1
                 time.sleep(15)
 
-                if try_cnt >= 19:
+                if try_cnt >= 20:
                     raise Exception("(pid={}) Credentials failed to be come valid".format(os.getpid()))
 
         if msg:
