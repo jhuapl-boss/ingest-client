@@ -19,7 +19,6 @@ import os
 
 from .path import PathProcessor
 from .tile import TileProcessor
-import math
 
 
 class CatmaidFileImageStackZoomLevelPathProcessor(PathProcessor):
@@ -288,10 +287,7 @@ class CatmaidFileImageStackTileProcessor(TileProcessor):
         tile_data = Image.open(file_path)
 
         output = six.BytesIO()
-        print("Format = " + self.parameters["filetype"].upper())
         tile_data.save(output, format=self.parameters["filetype"].upper())
-
-        
 
         # Send handle back
         return output
