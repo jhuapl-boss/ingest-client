@@ -1,5 +1,11 @@
 # Boss Ingest Client Changelog
 
+## 0.9.8
+
+### Fixed Bug:
+
+* updated requirements.txt to be compatible with boss-manage and intern by removing pinned versions of libraries.
+
 ## 0.9.7
 
 ### Fixed Bug:
