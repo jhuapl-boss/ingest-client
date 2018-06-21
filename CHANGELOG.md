@@ -9,7 +9,7 @@
 
 ## 0.9.6
 
-### Implemented Enhancements:
+### Fixed Bug:
 
 * Updated to catch AccessDenied and InvalidAccessKeyId errors and then request new credentials when this occurs.
 
