@@ -143,6 +143,100 @@ def get_parser():
     return parser
 
 
+def start_workers(ingest_job_id, args, configuration):
+    """
+    Start upload processes.
+
+    Args:
+        ingest_job_id (int):
+        args (Namespace): Command line arguments.
+        configuration(ingestclient.core.config.Configuration): A pre-loaded configuration instance.
+
+    Returns:
+        (list[(Process, Pipe)]): list of processes and their pipes.
+    """
+    # Ceate worker processes
+    workers = []
+    for i in range(args.processes_nb):
+        new_pipe = mp.Pipe(False)
+        new_process = mp.Process(target=worker_process_run, 
+                                 args=(args.api_token, ingest_job_id, new_pipe[0]),
+                                 kwargs={'config_file': args.config_file, 'configuration': configuration}
+                                 )
+        workers.append((new_process, new_pipe[1]))
+        new_process.start()
+
+        # Sleep to slowly ramp up load on lambda
+        time.sleep(.5)
+
+    return workers
+
+
+def upload(engine, args, configuration, start_time):
+    """
+    Kick off upload processes and monitor them.
+
+    Args:
+        engine (ingestclient.core.Engine):
+        args (Namespace): Command line arguments.
+        configuration(ingestclient.core.config.Configuration): A pre-loaded configuration instance.
+        start_time (float): When ingest client started in seconds since 1/1/1970 00:00.
+
+    Returns:
+        (bool): True if uploading not finished.
+    """
+    workers = start_workers(engine.ingest_job_id, args, configuration)
+
+    # Start the main process engine
+    should_run = True
+    job_complete = False
+    while should_run:
+        try:
+            engine.monitor(workers)
+            # run will end if no more jobs are available, join other processes
+            should_run = False
+            job_complete = True
+        except KeyboardInterrupt:
+            # Make sure they want to stop this client
+            while True:
+                quit_uploading = input("Are you sure you want to quit uploading? (y/n)")
+                if quit_uploading.lower() == "y":
+                    always_log_info("Stopping upload engine.")
+                    should_run = False
+                    break
+                elif quit_uploading.lower() == "n":
+                    print("Continuing...")
+                    break
+                else:
+                    print("Enter 'y' or 'n' for 'yes' or 'no'")
+
+            # notify the worker processes that they should stop execution
+            for _, worker_pipe in workers:
+                worker_pipe.send(should_run)
+
+    always_log_info("Waiting for worker processes to close...\n")
+    time.sleep(1)  # Make sure workers have cleaned up
+    for worker_process, worker_pipe in workers:
+        worker_process.join()
+        worker_pipe.close()
+
+    if job_complete:
+        # If auto-complete, mark the job as complete and cleanup
+        always_log_info("All upload tasks completed in {:.2f} minutes.".format((time.time() - start_time) / 60))
+        if not args.manual_complete:
+            always_log_info(" - Marking Ingest Job as complete and cleaning up. Please wait.")
+            if not engine.complete():
+                always_log_info("Unable to complete, still have chunks that aren't ingested")
+                return True
+            always_log_info(" - Cleanup Done")
+        else:
+            always_log_info(" - Auto-complete disabled. This ingest job will remain in the 'Uploading' state until you manually mark it as complete")
+            return False
+    else:
+        always_log_info("Client exiting")
+        always_log_info("Run time: {:.2f} minutes.".format((time.time() - start_time) / 60))
+        return False
+
 def main(configuration=None, parser_args=None):
     """Client UI main
 
@@ -278,73 +372,13 @@ def main(configuration=None, parser_args=None):
             print("OK - Your job is waiting for you. You can resume by providing Ingest Job ID '{}' to the client".format(engine.ingest_job_id))
             sys.exit(0)
 
-        # Join job
-        engine.join()
+    # Join job
+    engine.join()
 
-    else:
-        # Join job
-        engine.join()
-
-    # Create worker processes
-    workers = []
-    for i in range(args.processes_nb):
-        new_pipe = mp.Pipe(False)
-        new_process = mp.Process(target=worker_process_run, 
-                                 args=(args.api_token, engine.ingest_job_id, new_pipe[0]),
-                                 kwargs={'config_file': args.config_file, 'configuration': configuration}
-                                 )
-        workers.append((new_process, new_pipe[1]))
-        new_process.start()
-
-        # Sleep to slowly ramp up load on lambda
-        time.sleep(.5)
-
-    # Start the main process engine
     start_time = time.time()
-    should_run = True
-    job_complete = False
-    while should_run:
-        try:
-            engine.monitor(workers)
-            # run will end if no more jobs are available, join other processes
-            should_run = False
-            job_complete = True
-        except KeyboardInterrupt:
-            # Make sure they want to stop this client
-            while True:
-                quit_uploading = input("Are you sure you want to quit uploading? (y/n)")
-                if quit_uploading.lower() == "y":
-                    always_log_info("Stopping upload engine.")
-                    should_run = False
-                    break
-                elif quit_uploading.lower() == "n":
-                    print("Continuing...")
-                    break
-                else:
-                    print("Enter 'y' or 'n' for 'yes' or 'no'")
+    while upload(engine, args, configuration, start_time):
+        pass
 
-            # notify the worker processes that they should stop execution
-            for _, worker_pipe in workers:
-                worker_pipe.send(should_run)
-
-    always_log_info("Waiting for worker processes to close...\n")
-    time.sleep(1)  # Make sure workers have cleaned up
-    for worker_process, worker_pipe in workers:
-        worker_process.join()
-        worker_pipe.close()
-
-    if job_complete:
-        # If auto-complete, mark the job as complete and cleanup
-        always_log_info("All upload tasks completed in {:.2f} minutes.".format((time.time() - start_time) / 60))
-        if not args.manual_complete:
-            always_log_info(" - Marking Ingest Job as complete and cleaning up. Please wait.")
-            engine.complete()
-            always_log_info(" - Cleanup Done")
-        else:
-            always_log_info(" - Auto-complete disabled. This ingest job will remain in the 'Uploading' state until you manually mark it as complete")
-    else:
-        always_log_info("Client exiting")
-        always_log_info("Run time: {:.2f} minutes.".format((time.time() - start_time) / 60))
 
 
 if __name__ == '__main__':

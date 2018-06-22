@@ -189,11 +189,11 @@ class Engine(object):
         Args:
 
         Returns:
-            None
+            (bool): True if successfully completed job.
 
 
         """
-        self.backend.complete(self.ingest_job_id)
+        return self.backend.complete(self.ingest_job_id)
 
     def monitor(self, workers):
         """Method to monitor the progress of the ingest job
