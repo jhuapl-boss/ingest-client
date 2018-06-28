@@ -1,5 +1,29 @@
 # Boss Ingest Client Changelog
 
+## 0.9.8
+
+### Fixed Bug:
+
+* updated requirements.txt to be compatible with boss-manage and intern by removing pinned versions of libraries.
+
+## 0.9.7
+
+### Fixed Bug:
+
+* Fixed an off by one error while looping for credentials renewal
+
+
+## 0.9.6
+
+### Fixed Bug:
+
+* Updated to catch AccessDenied and InvalidAccessKeyId errors and then request new credentials when this occurs.
+
+## 0.9.5
+
+### Fixed Bug:
+
+* The try-catch in Engine.run() was just around the ingest client’s IO to S3, but user developed plugins can be doing IO to anything and have random, transient errors as well. Moved the try statement to the top of the loop.
 
 ## 0.9.4
 
