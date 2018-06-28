@@ -114,7 +114,7 @@ class Backend(object):
             ingest_job_id(int): The ID of the job you'd like to complete
 
         Returns:
-            None
+            (bool): True on successful completion
 
 
         """
@@ -428,15 +428,45 @@ class BossBackend(Backend):
             ingest_job_id(int): The ID of the job you'd like to complete
 
         Returns:
-            None
+            (bool): True if ingest complete
 
 
         """
         r = requests.post('{}/{}/ingest/{}/complete'.format(self.host, self.api_version, ingest_job_id),
                           headers=self.api_headers, verify=self.validate_ssl)
 
-        if r.status_code != 204:
-            raise Exception("Failed to complete ingest job: {}".format(r.json()))
+        if r.status_code == 204:
+            return True
+        if r.status_code == 202:
+            # Not all chunks ingested.
+            return False
+
+        raise Exception("Failed to complete ingest job: {}".format(r.json()))
+
+    def verify(self, ingest_job_id):
+        """
+        Method to start verification of an ingest job
+
+        Args:
+            ingest_job_id(int): The ID of the job you'd like to verify
+
+        Returns:
+            (bool): True if verified, False if there are outstanding tiles
+
+
+        """
+        r = requests.post('{}/{}/ingest/{}/verify'.format(self.host, self.api_version, ingest_job_id),
+                          headers=self.api_headers, verify=self.validate_ssl)
+
+        if r.status_code == 204:
+            return True
+        
+        # Verification process ran but still have work to do.
+        if r.status_code == 202:
+            return False
+
+        # Something went wrong.
+        raise Exception("Failed to verify ingest job: {}".format(r.json()))
 
     def get_task(self, num_messages=1):
         """

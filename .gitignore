@@ -91,3 +91,7 @@ ENV/
 .DS_Store
 /token.json
 /.pypirc
+
+# Vim files
+*.swp
+
