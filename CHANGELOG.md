@@ -1,5 +1,15 @@
 # Boss Ingest Client Changelog
 
+## 0.9.9
+
+### Fixed Bug:
+
+* Adjusted requirements.txt versions. 
+
+### Implemented Enhancements:
+
+* Added ability to wait for server to verify job has all tiles uploaded before completing. 
+
 ## 0.9.8
 
 ### Fixed Bug:
