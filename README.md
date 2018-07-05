@@ -67,7 +67,7 @@ There are three primary operations you can perform with the ingest client: Creat
 
 - **Creating a NEW Ingest Job**
 	- Populate an ingest job configuration file to specify the correct plugins for your data, the Boss resource to use, the extent of the dataset to be ingested, and the tile size.
-	- Refer to the [Creating Configuration Files](https://github.com/jhuapl-boss/ingest-client/wiki/Creating-Ingest-Job-Configuration-Files) wiki page for more detail on how to do this. Also, currently a helper script to create a channel in the Boss to which data can be written is found [here](https://github.com/jhuapl-boss/demos/tree/master/ingest_helpers).
+	- Refer to the [Creating Configuration Files](https://github.com/jhuapl-boss/ingest-client/wiki/Creating-Ingest-Job-Configuration-Files) wiki page for more detail on how to do this. Also, a helper script to create the Boss resources necessary for an ingest is found [here](https://github.com/jhuapl-boss/ingest-client/tree/master/ingestclient/utils/setup.py).
 
 	- Assuming you have created a configuration file, simply call the ingest client
 	 

@@ -130,7 +130,7 @@ def get_parser():
     parser.add_argument("--force", "-f",
                         action="store_true",
                         default=False,
-                        help="Flag indicating if you'd like ignore all confirmation prompts.")
+                        help="Flag indicating if you'd like to ignore all confirmation prompts.")
     parser.add_argument("--manual-complete", "-m",
                         action="store_true",
                         default=False,
