@@ -113,38 +113,26 @@ def create_experiment(config, rmt, collection, coord):
     Returns:
         (ExperimentResource)
     """
-    if 'num_time_samples' not in config['experiment']:
-        num_time_samples = 1
-    else:
-        num_time_samples = config['experiment']['num_time_samples']
 
-    if 'num_hierarchy_levels' not in config['experiment']:
-        num_hierarchy_levels = 1
-    else:
-        num_hierarchy_levels = config['experiment']['num_hierarchy_levels']
+    # Default values if not provided in config file.
+    exp_vals = {
+        'hierarchy_method': 'anisotropic',
+        'num_hierarchy_levels': 1,
+        'num_time_samples': 1,
+        'time_step': 0,
+        'time_step_unit': 'seconds'
+    }
 
-    if 'hierarchy_method' not in config['experiment']:
-        hierarchy_method = 'anisotropic'
-    else:
-        hierarchy_method = config['experiment']['hierarchy_method']
-
-    if 'time_step' not in config['experiment']:
-        time_step = 0
-    else:
-        time_step = config['experiment']['time_step']
-
-    if 'time_step_unit' not in config['experiment']:
-        time_step_unit = 'seconds'
-    else:
-        time_step_unit = config['experiment']['time_step_unit']
+    exp_vals.update(config['experiment'])
 
     experiment = ExperimentResource(
         config['experiment']['name'], collection.name, coord.name,
         config['experiment']['description'],
-        num_hierarchy_levels=num_hierarchy_levels,
-        hierarchy_method=hierarchy_method,
-        num_time_samples=num_time_samples,
-        time_step=time_step, time_step_unit=time_step_unit)
+        num_hierarchy_levels=exp_vals['num_hierarchy_levels'],
+        hierarchy_method=exp_vals['hierarchy_method'],
+        num_time_samples=exp_vals['num_time_samples'],
+        time_step=exp_vals['time_step'],
+        time_step_unit=exp_vals['time_step_unit'])
     try:
         experiment = rmt.create_project(experiment)
     except:
@@ -210,6 +198,32 @@ def create_coord_frame(config, rmt):
     return coord
 
 
+def add_gov_team_permissions(rmt, collection, experiment, channel):
+    """
+    Give read permission to the government team.
+
+    Args:
+        rmt (BossRemote):
+        collection (CollectionResource):
+        experiment (ExperimentResource):
+        channel (ChannelResource):
+    """
+
+    try:
+        rmt.add_permissions(GOV_TEAM, collection, ['read'])
+    except:
+        print('Failed to automatically add {} group to collection: {}'.format(GOV_TEAM, collection.name))
+
+    try:
+        rmt.add_permissions(GOV_TEAM, experiment, ['read'])
+    except:
+        print('Failed to automatically add {} group to experiment: {}'.format(GOV_TEAM, experiment.name))
+    try:
+        rmt.add_permissions(GOV_TEAM, channel, ['read'])
+    except:
+        print('Failed to automatically add {} group to channel: {}'.format(GOV_TEAM, channel.name))
+
+
 def main(args):
     """
     Main entry point of script.
@@ -228,13 +242,7 @@ def main(args):
     experiment = create_experiment(config, rmt, collection, coord)
     channel = create_channel(config, rmt, collection, experiment)
 
-    # Add gov team permissions
-    try:
-        rmt.add_permissions(GOV_TEAM, collection, ['read'])
-        rmt.add_permissions(GOV_TEAM, experiment, ['read'])
-        rmt.add_permissions(GOV_TEAM, channel, ['read'])
-    except:
-        print('Failed to automatically add {} group'.format(GOV_TEAM))
+    add_gov_team_permissions(rmt, collection, experiment, channel)
 
     # Update boss-ingest config file with resources names from config file
     if args.writecfg:
