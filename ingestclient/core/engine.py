@@ -23,7 +23,6 @@ import random
 from .config import Configuration, ConfigFileError
 from collections import deque
 
-
 class Engine(object):
     def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None):
         """
@@ -341,9 +340,13 @@ class Engine(object):
                                                  key_parts["t_index"])
 
             try:
+                print("x_tile_size: " + str(self.config.config_data['ingest_job']["tile_size"]["x"]))
+                print("x_tile_size: " + str(self.config.config_data['ingest_job']["tile_size"]["x"]))
                 metadata = {'chunk_key': msg['chunk_key'],
                             'ingest_job': self.ingest_job_id,
                             'parameters': self.job_params,
+                            'x_size': self.config.config_data['ingest_job']["tile_size"]["x"],
+                            'y_size': self.config.config_data['ingest_job']["tile_size"]["y"],
                             }
                 handle.seek(0)
                 response = self.backend.bucket.put_object(ACL='private',
