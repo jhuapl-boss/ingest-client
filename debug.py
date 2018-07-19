@@ -47,7 +47,7 @@ def main():
                                      epilog="Visit https://docs.theBoss.io for more details")
 
     parser.add_argument("queue_name",
-                        help="Name of the ingest SQS queue")
+                        help="URL of the ingest SQS queue")
 
     parser.add_argument("data_dir",
                         default=None,
