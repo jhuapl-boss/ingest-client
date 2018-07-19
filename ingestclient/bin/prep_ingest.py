@@ -242,7 +242,8 @@ def main(args):
     experiment = create_experiment(config, rmt, collection, coord)
     channel = create_channel(config, rmt, collection, experiment)
 
-    add_gov_team_permissions(rmt, collection, experiment, channel)
+    if args.govteam:
+        add_gov_team_permissions(rmt, collection, experiment, channel)
 
     # Update boss-ingest config file with resources names from config file
     if args.writecfg:
@@ -281,6 +282,10 @@ def parse_args():
         '--writecfg',
         action='store_true',
         help='Update the boss-ingest config file with names of collection/experiment/channel.')
+    parser.add_argument(
+        '--govteam',
+        action='store_true',
+        help='Add read-only permissions for the Government team.')
     parser.add_argument(
         'config_file',
         help='Collection/experiment/channel configuration in JSON.')
