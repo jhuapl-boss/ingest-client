@@ -6,6 +6,10 @@
 
 * Added x and y tile sizes to metadata of s3 tiles.  This allows the ingest backend to create blank tiles when corrupt images are received. 
 
+### Implemented Enhancements:
+
+* Added in bin/prep_ingest.py which will create Collection, Experiment, Coordinate Frame, and Channel for you and add them to your ingest-client json config file.
+
 
 ## 0.9.9
 
