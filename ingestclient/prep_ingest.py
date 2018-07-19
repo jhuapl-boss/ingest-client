@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,9 +48,9 @@ exception is "ingest_cfg" as explained previously.
     "y_stop": 1024,
     "z_start": 0,
     "z_stop": 32,
-    "voxel_size_x": 3,
-    "voxel_size_y": 3,
-    "voxel_size_z": 30
+    "voxel_size_x": 4,
+    "voxel_size_y": 4,
+    "voxel_size_z": 40
   },
   "experiment": {
     "name": "my_exp",
@@ -58,7 +59,7 @@ exception is "ingest_cfg" as explained previously.
     "num_hierarchy_levels": 1,              # Optional.
     "hierarchy_method": "anisotropic",      # Optional.
     "time_step": 0,                         # Optional.
-    "time_step_unit": "seconds"             # Optional.
+    "time_step_unit": "nanoseconds"         # Optional.
   },
   "channel": {
     "name": "my_chan",
@@ -224,13 +225,18 @@ def add_gov_team_permissions(rmt, collection, experiment, channel):
         print('Failed to automatically add {} group to channel: {}'.format(GOV_TEAM, channel.name))
 
 
-def main(args):
+def main(parser_args=None):
     """
     Main entry point of script.
 
     Args:
-        args (Namespace): Parsed command line arguments.
+        parser_args(argparse.ArgumentParser): A pre-loaded ArgumentParser instance
     """
+    if parser_args is None:
+        args = parse_args()
+    else:
+        args = parser_args
+
     rmt = BossRemote(args.intern_cfg)
 
     # Load Configuration File
@@ -293,6 +299,5 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    main(args)
+    main()
 

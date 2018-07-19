@@ -35,7 +35,7 @@ setup(
     author_email='iarpamicrons@jhuapl.edu',
 
     entry_points={
-        'console_scripts': ['boss-ingest=ingestclient.client:main'],
+        'console_scripts': ['boss-ingest=ingestclient.client:main', 'prep_ingest=ingestclient.prep_ingest:main']
     },
     #packages=find_packages('ingestclient'),
     packages=['ingestclient',
