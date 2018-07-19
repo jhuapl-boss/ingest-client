@@ -94,5 +94,8 @@ class QueueRecovery(object):
 
         print("Waiting for 2.5 minutes message timeout to check outcome...")
         time.sleep(150)
+
+        # Update queue attributes.
+        self.queue.reload()
         print("Started with {} messages. Resulted in {} messages".format(starting_message_count,
                                                                          self.queue.attributes['ApproximateNumberOfMessages']))
