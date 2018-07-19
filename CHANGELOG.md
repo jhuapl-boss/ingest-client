@@ -8,7 +8,7 @@
 
 ### Implemented Enhancements:
 
-* Added in bin/prep_ingest.py which will create Collection, Experiment, Coordinate Frame, and Channel for you and add them to your ingest-client json config file.
+* Added in prep_ingest.py which will become a new script prep_ingest on pip install.  It will create Collection, Experiment, Coordinate Frame, and Channel for you and add them to your ingest-client json config file.
 
 
 ## 0.9.9
