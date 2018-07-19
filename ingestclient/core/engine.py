@@ -340,8 +340,6 @@ class Engine(object):
                                                  key_parts["t_index"])
 
             try:
-                print("x_tile_size: " + str(self.config.config_data['ingest_job']["tile_size"]["x"]))
-                print("x_tile_size: " + str(self.config.config_data['ingest_job']["tile_size"]["x"]))
                 metadata = {'chunk_key': msg['chunk_key'],
                             'ingest_job': self.ingest_job_id,
                             'parameters': self.job_params,
