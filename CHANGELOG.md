@@ -1,5 +1,12 @@
 # Boss Ingest Client Changelog
 
+## 0.9.10
+
+### Fixed Bug:
+
+* Added x and y tile sizes to metadata of s3 tiles.  This allows the ingest backend to create blank tiles when corrupt images are received. 
+
+
 ## 0.9.9
 
 ### Fixed Bug:
