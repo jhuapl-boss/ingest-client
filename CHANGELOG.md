@@ -1,5 +1,12 @@
 # Boss Ingest Client Changelog
 
+## 0.9.11
+
+### Implemented Enhancements:
+
+* Added no_cache option to the intern plugin, this will increase the download speed be avoiding the cache.
+
+
 ## 0.9.10
 
 ### Fixed Bug:
