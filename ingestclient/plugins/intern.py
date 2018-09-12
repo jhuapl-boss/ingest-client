@@ -117,25 +117,34 @@ class InternTileProcessor(TileProcessor):
                  self.parameters["y_tile"] * (y_index + 1) + self.parameters["y_offset"]]
         z_rng = [z_index + self.parameters["z_offset"], z_index + 1 + self.parameters["z_offset"]]
 
-        if z_index + self.parameters["z_offset"] < 0:
-            data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]),
-                            dtype=np.int32, order="C")
-        else:
-            # Get data
-            cnt = 0
-            while cnt < 5:
-                try:
-                    data = self.remote.get_cutout(self.channel, self.parameters["resolution"], x_rng, y_rng, z_rng)
-                    data = np.asarray(data, np.uint32)
-                    break
-                except Exception as err:
-                    if cnt > 5:
-                        raise err
-                    cnt += 1
-                    time.sleep(10)
+        trial =0
+        while trial < 3:
+            try:
+                if z_index + self.parameters["z_offset"] < 0:
+                    data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]),
+                                    dtype=np.int32, order="C")
+                else:
+                    # Get data
+                    cnt = 0
+                    while cnt < 5:
+                        try:
+                            data = self.remote.get_cutout(self.channel, self.parameters["resolution"], x_rng, y_rng, z_rng)
+                            data = np.asarray(data, np.uint32)
+                            break
+                        except Exception as err:
+                            if cnt > 5:
+                                raise err
+                            cnt += 1
+                            time.sleep(10)
+                upload_img = Image.fromarray(np.squeeze(data))
+                trial = 3
+            except Exception as e:
+                print("Error occured defining data, this is trial: " + str(trial))
+                if trial < 3:
+                    trial += 1
+                else:
+                    print(e)
 
-        # Save sub-img to png and return handle
-        upload_img = Image.fromarray(np.squeeze(data))
         output = six.BytesIO()
         upload_img.save(output, format="TIFF")
 
