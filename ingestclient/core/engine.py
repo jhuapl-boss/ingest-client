@@ -242,7 +242,7 @@ class Engine(object):
                 else:
                     log_str = "Uploading in progress: Elapsed time {:.2f} minutes"
                     log_str = log_str.format((time.time() - start_time) / 60)
-                    always_log_info()
+                    always_log_info(log_str)
 
             # Wait to loop
             time.sleep(10)

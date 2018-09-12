@@ -195,7 +195,13 @@ def upload(engine, args, configuration, start_time):
             engine.monitor(workers)
             # run will end if no more jobs are available, join other processes
             should_run = False
-            job_complete = True
+            status = engine.backend.get_job_status(engine.ingest_job_id)
+            if status:
+                if status["current_message_count"] == 0:
+                    job_complete = True
+            else:
+                always_log_info("Unable to get job status - not marking job as complete.")
+
         except KeyboardInterrupt:
             # Make sure they want to stop this client
             while True:
