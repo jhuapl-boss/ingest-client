@@ -229,6 +229,15 @@ def main(configuration=None, parser_args=None):
 
     if args.cancel:
         # Trying to cancel
+        boss_backend_params = {"client": {
+            "backend": {
+                "name": "boss",
+                "class": "BossBackend",
+                "host": "api.theboss.io",
+                "protocol": "https"}}}
+        backend = BossBackend(boss_backend_params)
+        backend.setup(args.api_token)
+        
         if args.job_id is None:
             parser.print_usage()
             print("Error: You must provide an ingest job ID to cancel")
@@ -237,6 +246,11 @@ def main(configuration=None, parser_args=None):
         if not get_confirmation("Are you sure you want to cancel ingest job {}? ".format(args.job_id), args.force):
             print("Command ignored. Job not cancelled")
             sys.exit(0)
+
+        status = backend.get_job_status(args.job_id)
+        if status == 'deleted':
+            print(("Job {} already deleted").format(args.job_id))
+            sys.exit(1)
 
         always_log_info("Attempting to cancel Ingest Job {}.".format(args.job_id))
         engine.cancel()

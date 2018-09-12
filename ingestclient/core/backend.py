@@ -479,7 +479,9 @@ class BossBackend(Backend):
         r = requests.get('{}/{}/ingest/{}/status'.format(self.host, self.api_version, ingest_job_id),
                          headers=self.api_headers, verify=self.validate_ssl)
 
-        if r.status_code != 200:
+        if r.text == '{"status": 404, "code": 2004, "message": "The job with id %s has been deleted"}' % (ingest_job_id):
+            return "deleted"
+        if r.status_code != 200 or r.code != 2004:
             raise Exception("Failed to get ingest job status: {}".format(r.text))
         else:
             return r.json()
