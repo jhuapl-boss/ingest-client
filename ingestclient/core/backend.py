@@ -481,7 +481,7 @@ class BossBackend(Backend):
 
         if r.text == '{"status": 404, "code": 2004, "message": "The job with id %s has been deleted"}' % (ingest_job_id):
             return "deleted"
-        if r.status_code != 200 or r.code != 2004:
+        if r.status_code != 200:
             raise Exception("Failed to get ingest job status: {}".format(r.text))
         else:
             return r.json()
