@@ -28,6 +28,7 @@ import multiprocessing as mp
 import os
 import time
 import logging
+import json
 
 
 def get_confirmation(prompt, force=False):
@@ -228,16 +229,13 @@ def main(configuration=None, parser_args=None):
         sys.exit(1)
 
     if args.cancel:
-        # Trying to cancel
-        boss_backend_params = {"client": {
-            "backend": {
-                "name": "boss",
-                "class": "BossBackend",
-                "host": "api.theboss.io",
-                "protocol": "https"}}}
-        backend = BossBackend(boss_backend_params)
+        # If cancelling with config_file
+        with open(args.config_file, 'r') as f:
+            config_dict = json.load(f)
+        backend = BossBackend(config_dict)
         backend.setup(args.api_token)
         
+        # Trying to cancel
         if args.job_id is None:
             parser.print_usage()
             print("Error: You must provide an ingest job ID to cancel")
