@@ -199,6 +199,8 @@ def upload(engine, args, configuration, start_time):
             if status:
                 if status["current_message_count"] == 0:
                     job_complete = True
+                else:
+                    always_log_info("Error: Something has gone wrong, monitor has ended even though there are still messages in upload queue.")
             else:
                 always_log_info("Unable to get job status - not marking job as complete.")
 
