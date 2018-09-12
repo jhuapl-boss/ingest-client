@@ -187,6 +187,11 @@ def main(configuration=None, parser_args=None):
             if not get_confirmation("Are you sure you want to cancel ingest job {}? ".format(args.job_id), args.force):
                 print("Command ignored. Job not cancelled")
                 sys.exit(0)
+            
+            status = backend.get_job_status(args.job_id)
+            if status == 'deleted':
+                print(("Job {} already deleted").format(args.job_id))
+                sys.exit(0)
 
             backend.cancel(args.job_id)
             print("Ingest job {} successfully cancelled.".format(args.job_id))
@@ -248,7 +253,7 @@ def main(configuration=None, parser_args=None):
         status = backend.get_job_status(args.job_id)
         if status == 'deleted':
             print(("Job {} already deleted").format(args.job_id))
-            sys.exit(1)
+            sys.exit(0)
 
         always_log_info("Attempting to cancel Ingest Job {}.".format(args.job_id))
         engine.cancel()
