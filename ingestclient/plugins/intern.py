@@ -125,7 +125,8 @@ class InternTileProcessor(TileProcessor):
             cnt = 0
             while cnt < 5:
                 try:
-                    data = self.remote.get_cutout(self.channel, self.parameters["resolution"], x_rng, y_rng, z_rng)
+                    data = self.remote.get_cutout(self.channel, self.parameters["resolution"],
+                                                  x_rng, y_rng, z_rng, no_cache=True)
                     data = np.asarray(data, np.uint32)
                     break
                 except Exception as err:
