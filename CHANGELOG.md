@@ -2,9 +2,15 @@
 
 ## 0.9.11
 
+### Fixed Bug:
+
+* Ingest-job will not be completed unless the upload-queue has zero messages in it.  If an error occurs job will remain now and not close. 
+
+
 ### Implemented Enhancements:
 
 * Added no_cache option to the intern plugin, this will increase the download speed be avoiding the cache.
+
 
 
 ## 0.9.10
