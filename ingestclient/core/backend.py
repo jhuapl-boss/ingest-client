@@ -496,6 +496,51 @@ class BossBackend(Backend):
         else:
             return None, None, None
 
+    def delete_task(self, msg_id, receipt_handle):
+        """
+        Delete a message from the upload queue
+
+        This is only used for volumetric ingests.
+
+        Args:
+            msg_id (str): Id of queue message.
+            receipt_handle (str): Actual id required to delete the message.
+
+        Returns:
+            (bool): True on success.
+
+        Raises:
+            (Exception): Raised after n consecutive ClientErrors.
+        """
+        MAX_TRIES = 20
+        try_cnt = 0
+        while try_cnt < MAX_TRIES - 1:
+            try:
+                resp = self.queue.delete_messages(Entries=[{'Id': msg_id, 'ReceiptHandle': receipt_handle}])
+                if 'Successful' in resp and len(resp['Successful']) > 0:
+                    if resp['Successful'][0]['Id'] == msg_id:
+                        return True
+
+                # Failed for some reason.
+                try_cnt += 1
+                if 'Failed' in resp and len(resp['Failed']) > 0:
+                    err = resp['Failed'][0]
+                    always_log_info('Failed deleting message from queue: ({}) - {}'.format(err['Code'], err['Message']))
+                    if err['SenderFault']:
+                        # If it's our fault, give up.
+                        break
+
+                time.sleep(5)
+            except botocore.exceptions.ClientError:
+                print("(pid={}) Waiting for credentials to be valid".format(os.getpid()))
+                try_cnt += 1
+                time.sleep(15)
+
+                if try_cnt >= MAX_TRIES:
+                    raise Exception("(pid={}) Credentials failed to be come valid".format(os.getpid()))
+
+        return False
+
     def get_job_status(self, ingest_job_id):
         """
         Method to get the job status
@@ -541,11 +586,11 @@ class BossBackend(Backend):
     def encode_chunk_key(self, num_tiles, project_info, resolution, x_index, y_index, z_index, t_index=0):
         """A method to create a chunk key.
 
-        A "chunk" is the group of tiles that must be uploaded so a cuboid can be ingested.  The chunk key is used
-        to track all tiles in a given group.
+        A "chunk" is either a single 3D volume or a group of tiles that must be uploaded so cuboids can be ingested.  The chunk key
+        identifies the 3D volume or all tiles in a given group.
 
         Args:
-            num_tiles(int): The expected number of tiles in this chunk (in the z-dimension). Useful for forcing ingest of partial cuboids
+            num_tiles(int): The expected number of tiles in this chunk (in the z-dimension). Useful for forcing ingest of partial cuboids.  For a 3D volume, its value is 1.
             project_info(list): A list of strings containing the project/data model information for where data belongs
             resolution(int): The level of the resolution hierarchy.  Typically 0
             x_index(int): The x tile index
@@ -591,8 +636,6 @@ class BossBackend(Backend):
 
     def decode_chunk_key(self, key):
         """A method to decode the chunk key
-
-        The tile key is the key used for each individual tile file.
 
         Args:
             key(str): The key to decode
