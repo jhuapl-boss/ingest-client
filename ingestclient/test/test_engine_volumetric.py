@@ -18,7 +18,7 @@ from ingestclient.core.validator import Validator, BossValidatorV02
 from ingestclient.core.backend import Backend, BossBackend
 from ingestclient.core.config import Configuration, ConfigFileError
 from ingestclient.core.consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z 
-from ingestclient.test.aws import Setup, VOLUMETRIC_CUBOID_KEY 
+from ingestclient.test.aws import Setup, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY 
 from ingestclient.plugins.chunk import XYZ_ORDER, ZYX_ORDER, XYZT_ORDER, TZYX_ORDER
 
 import os
@@ -165,7 +165,7 @@ class EngineBossTestMixin(object):
         x = 1024
         y = 512
         z = 16
-        assert True == engine.upload_cuboid(chunk, x, y, z, VOLUMETRIC_CUBOID_KEY, XYZ_ORDER)
+        assert True == engine.upload_cuboid(chunk, x, y, z, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
 
         exp_x = slice(x, x+BOSS_CUBOID_X, None)
         exp_y = slice(y, y+BOSS_CUBOID_Y, None)
@@ -184,7 +184,7 @@ class EngineBossTestMixin(object):
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, XYZT_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZT_ORDER)
 
         s3 = boto3.resource('s3')
         tile_bucket = s3.Bucket(self.tile_bucket_name)
@@ -209,7 +209,7 @@ class EngineBossTestMixin(object):
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, TZYX_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, TZYX_ORDER)
 
         s3 = boto3.resource('s3')
         tile_bucket = s3.Bucket(self.tile_bucket_name)
@@ -234,7 +234,7 @@ class EngineBossTestMixin(object):
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, XYZ_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
 
         s3 = boto3.resource('s3')
         tile_bucket = s3.Bucket(self.tile_bucket_name)
@@ -259,7 +259,7 @@ class EngineBossTestMixin(object):
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, ZYX_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, ZYX_ORDER)
 
         s3 = boto3.resource('s3')
         tile_bucket = s3.Bucket(self.tile_bucket_name)

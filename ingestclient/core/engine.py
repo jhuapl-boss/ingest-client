@@ -470,7 +470,9 @@ class Engine(object):
             x = cuboid_data['x']
             y = cuboid_data['y']
             z = cuboid_data['z']
-            if not self.upload_cuboid(c_order_chunk, x, y, z, cuboid_data['key'], array_order):
+            if not self.upload_cuboid(
+                c_order_chunk, x, y, z, cuboid_data['key'], msg['chunk_key'], array_order
+            ):
                 return False
 
         # Successfully uploaded all cuboids - delete message from upload queue.
@@ -478,7 +480,7 @@ class Engine(object):
 
         return True
 
-    def upload_cuboid(self, chunk, x, y, z, key, array_order):
+    def upload_cuboid(self, chunk, x, y, z, key, chunk_key, array_order):
         """
         Upload a single Boss cuboid to the ingest bucket.
 
@@ -488,6 +490,7 @@ class Engine(object):
             y (int): The starting index in y of the cuboid.
             z (int): The starting index in z of the cuboid.
             key (str): S3 object key for storing this cuboid in the bucket.
+            chunk_key (str): Chunk key will be stored in the S3 object's metadata.
             array_order (int): Order of elements in array (XYZ_ORDER, TZYX_ORDER, etc).
 
         Returns:
@@ -496,6 +499,7 @@ class Engine(object):
         try:
             metadata = {
                 'ingest_job': self.ingest_job_id,
+                'chunk_key': chunk_key,
                 'parameters': self.job_params
             }
 

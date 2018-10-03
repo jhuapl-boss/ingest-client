@@ -20,6 +20,8 @@ from moto import mock_sqs
 import time
 
 VOLUMETRIC_CUBOID_KEY = "md5hash&1&2&3&0&22"
+# Currently just passed to Engine.upload_cuboid() to be stored in metadata.
+VOLUMETRIC_CHUNK_KEY = "foo"
 
 
 class Setup(object):
