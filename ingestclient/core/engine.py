@@ -22,7 +22,6 @@ from math import floor
 import random
 from .config import Configuration, ConfigFileError
 from collections import deque
-from pprint import pprint
 
 class Engine(object):
     def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None):
