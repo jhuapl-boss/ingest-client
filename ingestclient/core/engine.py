@@ -22,6 +22,7 @@ from math import floor
 import random
 from .config import Configuration, ConfigFileError
 from collections import deque
+from pprint import pprint
 
 class Engine(object):
     def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None):
@@ -340,12 +341,22 @@ class Engine(object):
                                                  key_parts["t_index"])
 
             try:
+
                 metadata = {'chunk_key': msg['chunk_key'],
                             'ingest_job': self.ingest_job_id,
-                            'parameters': self.job_params,
+                            'parameters': dict(self.job_params),
                             'x_size': self.config.config_data['ingest_job']["tile_size"]["x"],
                             'y_size': self.config.config_data['ingest_job']["tile_size"]["y"],
                             }
+                # The following parameters are not needed during the ingest job
+                # however SPDB will fail to load correctly without the keys.
+                # The values are removed as there can only be 2K of metadata.
+                # If we need more room we could delete these keys and automatically add them again
+                # before instantiating SPDB.
+                metadata['parameters']['OBJECTIO_CONFIG']['page_in_lambda_function'] = ""
+                metadata['parameters']['OBJECTIO_CONFIG']['page_out_lambda_function'] = ""
+                metadata['parameters']['OBJECTIO_CONFIG']['s3_flush_queue'] = ""
+
                 handle.seek(0)
                 response = self.backend.bucket.put_object(ACL='private',
                                                           Body=handle,
