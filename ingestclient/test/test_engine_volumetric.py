@@ -58,6 +58,7 @@ class ResponsesMixin(object):
                                           },
                            "ingest_lambda": "my_lambda",
                            "tile_bucket_name": self.tile_bucket_name,
+                           "ingest_bucket_name": self.ingest_bucket_name,
                            "KVIO_SETTINGS": {"settings": "go here"},
                            "STATEIO_CONFIG": {"settings": "go here"},
                            "OBJECTIO_CONFIG": {"settings": "go here"},
@@ -138,11 +139,11 @@ class EngineBossTestMixin(object):
 
         # Check for tile to exist
         s3 = boto3.resource('s3')
-        tile_bucket = s3.Bucket(self.tile_bucket_name)
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
 
         with tempfile.NamedTemporaryFile() as test_file:
             with open(test_file.name, 'wb') as raw_data:
-                tile_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
                 # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
@@ -187,11 +188,11 @@ class EngineBossTestMixin(object):
         assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZT_ORDER)
 
         s3 = boto3.resource('s3')
-        tile_bucket = s3.Bucket(self.tile_bucket_name)
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
 
         with tempfile.NamedTemporaryFile() as test_file:
             with open(test_file.name, 'wb') as raw_data:
-                tile_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
                 # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
@@ -212,11 +213,11 @@ class EngineBossTestMixin(object):
         assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, TZYX_ORDER)
 
         s3 = boto3.resource('s3')
-        tile_bucket = s3.Bucket(self.tile_bucket_name)
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
 
         with tempfile.NamedTemporaryFile() as test_file:
             with open(test_file.name, 'wb') as raw_data:
-                tile_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
                 # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
@@ -237,11 +238,11 @@ class EngineBossTestMixin(object):
         assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
 
         s3 = boto3.resource('s3')
-        tile_bucket = s3.Bucket(self.tile_bucket_name)
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
 
         with tempfile.NamedTemporaryFile() as test_file:
             with open(test_file.name, 'wb') as raw_data:
-                tile_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
                 # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
@@ -262,11 +263,11 @@ class EngineBossTestMixin(object):
         assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, ZYX_ORDER)
 
         s3 = boto3.resource('s3')
-        tile_bucket = s3.Bucket(self.tile_bucket_name)
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
 
         with tempfile.NamedTemporaryFile() as test_file:
             with open(test_file.name, 'wb') as raw_data:
-                tile_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
                 # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
@@ -299,8 +300,9 @@ class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
 
         cls.queue_url = cls.setup_helper.create_queue("test-queue")
 
-        cls.tile_bucket_name = "test-cuboid-store"
-        cls.setup_helper.create_bucket(cls.tile_bucket_name )
+        cls.tile_bucket_name = "test-tile-store"
+        cls.ingest_bucket_name = "test-cuboid-store"
+        cls.setup_helper.create_bucket(cls.ingest_bucket_name )
 
         # mock api token
         cls.api_token = "aalasdklbajklsbfasdklbfkjdsb"

@@ -528,7 +528,7 @@ class Engine(object):
             # Assume chunk has data type that matches the Boss channel.
             compressed_data = blosc.compress(data, typesize=(data.dtype).itemsize * 8)
 
-            response = self.backend.bucket.put_object(ACL='private',
+            response = self.backend.volumetric_bucket.put_object(ACL='private',
                                                       Body=compressed_data,
                                                       Key=key,
                                                       Metadata={

@@ -30,6 +30,15 @@ from ..utils.log import always_log_info
 
 @six.add_metaclass(ABCMeta)
 class Backend(object):
+    """
+
+    Attributes:
+        config (dict):
+        sqs:
+        s3 (boto3.S3)::
+        bucket (S3.Bucket): Tile bucket.
+        volumetric_bucket (S3.Bucket): Temporary cuboid holding bucket for volumetric ingests.
+    """
     def __init__(self, config):
         """
         A class to implement a backend that supports the ingest service
@@ -43,6 +52,7 @@ class Backend(object):
         self.queue = None
         self.s3 = None
         self.bucket = None
+        self.volumetric_bucket = None
 
     @abstractmethod
     def setup(self):
@@ -173,7 +183,7 @@ class Backend(object):
         Args:
             credentials(dict): AWS credentials
             tile_bucket(str): The name of the bucket
-            region(str): The AWS region where the SQS queue exists
+            region(str): The AWS region where the bucket exists
 
         Returns:
             None
@@ -182,6 +192,23 @@ class Backend(object):
         self.s3 = boto3.resource('s3', region_name=region, aws_access_key_id=credentials["access_key"],
                                  aws_secret_access_key=credentials["secret_key"])
         self.bucket = self.s3.Bucket(tile_bucket)
+
+    def setup_volumetric_bucket(self, credentials, bucket_name, region="us-east-1"):
+        """
+        Method to create a connection to the tile bucket
+
+        Args:
+            credentials(dict): AWS credentials
+            bucket_name(str): The name of the bucket
+            region(str): The AWS region where the bucket exists
+
+        Returns:
+            None
+
+        """
+        self.s3 = boto3.resource('s3', region_name=region, aws_access_key_id=credentials["access_key"],
+                                 aws_secret_access_key=credentials["secret_key"])
+        self.volumetric_bucket = self.s3.Bucket(bucket_name)
 
     @abstractmethod
     def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
@@ -399,6 +426,7 @@ class BossBackend(Backend):
 
                     self.setup_upload_queue(creds, queue, region="us-east-1")
                     self.setup_tile_bucket(creds, tile_bucket, region="us-east-1")
+                    self.setup_volumetric_bucket(creds, result["ingest_bucket_name"], region="us-east-1")
 
                     return job_status, creds, queue, tile_bucket, params, num_tiles
 
