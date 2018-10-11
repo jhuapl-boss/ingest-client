@@ -101,4 +101,16 @@ class CloudVolumeChunkProcessor(ChunkProcessor):
         x_size = self.ingest_job["chunk_size"]["x"]
         y_size = self.ingest_job["chunk_size"]["y"]
         z_size = self.ingest_job["chunk_size"]["z"]
-        return self.vol[x_index:x_index+x_size, y_index:y_index+y_size, z_index:z_index+z_size], XYZT_ORDER
+
+        x_stop = x_index+x_size
+        y_stop = y_index+y_size
+        z_stop = z_index+z_size
+
+        if x_stop > self.vol.bounds.maxpt[0]:
+            x_stop = self.vol.bounds.maxpt[0]
+        if y_stop > self.vol.bounds.maxpt[1]:
+            y_stop = self.vol.bounds.maxpt[1]
+        if z_stop > self.vol.bounds.maxpt[2]:
+            z_stop = self.vol.bounds.maxpt[2]
+
+        return self.vol[x_index:x_stop, y_index:y_stop, z_index:z_stop], XYZT_ORDER

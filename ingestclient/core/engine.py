@@ -438,7 +438,7 @@ class Engine(object):
             (bool): False if upload should be aborted.
         """
         key_parts = self.backend.decode_chunk_key(msg['chunk_key'])
-        self.logger.info("(pid={}) Processing Task -  X:{} Y:{} Z:{} ".format(os.getpid(),
+        self.logger.info("(pid={}) Processing Chunk -  X:{} Y:{} Z:{} ".format(os.getpid(),
                                                                          key_parts["x_index"],
                                                                          key_parts["y_index"],
                                                                          key_parts["z_index"]))
@@ -503,8 +503,6 @@ class Engine(object):
                 'parameters': self.job_params
             }
 
-            print('chunk: {}, {}'.format(chunk.flags['C_CONTIGUOUS'], chunk.shape))
-
             if array_order == XYZ_ORDER or array_order == XYZT_ORDER:
                 raw_sub_chunk = chunk[x:x+BOSS_CUBOID_X, y:y+BOSS_CUBOID_Y, z:z+BOSS_CUBOID_Z]
                 # Fix ordering so either Z or T first.
@@ -518,9 +516,17 @@ class Engine(object):
             else:
                 array_4d = ordered_array
 
+            # Grow a partial cuboid to full size.
+            if array_4d.shape != (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X):
+                z_diff = BOSS_CUBOID_Z - array_4d.shape[1]
+                y_diff = BOSS_CUBOID_Y - array_4d.shape[2]
+                x_diff = BOSS_CUBOID_X - array_4d.shape[3]
+                array_4d = np.pad(
+                    array_4d, ((0, 0), (0, z_diff), (0, y_diff), (0, x_diff)),
+                    'constant', constant_values=0)
+
             # Ensure array is in C order.
             if not array_4d.flags['C_CONTIGUOUS']:
-                print('making c order')
                 data = np.ascontiguousarray(array_4d)
             else:
                 data = array_4d

@@ -194,7 +194,6 @@ class EngineBossTestMixin(object):
             with open(test_file.name, 'wb') as raw_data:
                 ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
-                # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
                 cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
                 assert np.array_equal(np.transpose(data), cuboid)
@@ -219,7 +218,6 @@ class EngineBossTestMixin(object):
             with open(test_file.name, 'wb') as raw_data:
                 ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
-                # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
                 cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
                 assert np.array_equal(data, cuboid)
@@ -244,7 +242,6 @@ class EngineBossTestMixin(object):
             with open(test_file.name, 'wb') as raw_data:
                 ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
-                # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
                 cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
                 assert np.array_equal(np.expand_dims(np.transpose(data), 0), cuboid)
@@ -269,10 +266,156 @@ class EngineBossTestMixin(object):
             with open(test_file.name, 'wb') as raw_data:
                 ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
             with open(test_file.name, 'rb') as raw_data:
-                # Using an empty CloudVolume dataset so all values should be 0.
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
                 cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
                 assert np.array_equal(np.expand_dims(data, 0), cuboid)
+
+    def test_upload_cuboid_partial_cuboid_zyx_order(self):
+        missing_z = 3
+        z_stop = BOSS_CUBOID_Z - missing_z
+        missing_y = 11
+        y_stop = BOSS_CUBOID_Y - missing_y
+        missing_x = 7
+        x_stop = BOSS_CUBOID_X - missing_x
+        partial_cuboid = np.random.randint(0, 256, (z_stop, y_stop, x_stop), 'uint8')
+
+        chunk = MagicMock(spec=np.ndarray)
+        chunk.__getitem__.return_value = partial_cuboid
+
+        expected_cuboid = np.pad(np.expand_dims(partial_cuboid, 0), ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)), 'constant', constant_values=0)
+
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+
+        engine = Engine(self.config_file, self.api_token, 23)
+        self.setup_helper.add_volumetric_tasks(
+            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+
+        engine.join()
+
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, ZYX_ORDER)
+
+        s3 = boto3.resource('s3')
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
+
+        with tempfile.NamedTemporaryFile() as test_file:
+            with open(test_file.name, 'wb') as raw_data:
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+            with open(test_file.name, 'rb') as raw_data:
+                # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
+                cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
+                assert expected_cuboid.shape == cuboid.shape
+                assert np.array_equal(expected_cuboid, cuboid)
+
+    def test_upload_cuboid_partial_cuboid_xyz_order(self):
+        missing_z = 3
+        z_stop = BOSS_CUBOID_Z - missing_z
+        missing_y = 11
+        y_stop = BOSS_CUBOID_Y - missing_y
+        missing_x = 7
+        x_stop = BOSS_CUBOID_X - missing_x
+        partial_cuboid = np.random.randint(0, 256, (x_stop, y_stop, z_stop), 'uint8')
+
+        chunk = MagicMock(spec=np.ndarray)
+        chunk.__getitem__.return_value = partial_cuboid
+
+        expected_cuboid = np.pad(
+            np.expand_dims(np.transpose(partial_cuboid), 0),
+            ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)),
+            'constant', constant_values=0)
+
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+
+        engine = Engine(self.config_file, self.api_token, 23)
+        self.setup_helper.add_volumetric_tasks(
+            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+
+        engine.join()
+
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
+
+        s3 = boto3.resource('s3')
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
+
+        with tempfile.NamedTemporaryFile() as test_file:
+            with open(test_file.name, 'wb') as raw_data:
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+            with open(test_file.name, 'rb') as raw_data:
+                # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
+                cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
+                assert expected_cuboid.shape == cuboid.shape
+                assert np.array_equal(expected_cuboid, cuboid)
+
+    def test_upload_cuboid_partial_cuboid_tzyx_order(self):
+        missing_z = 3
+        z_stop = BOSS_CUBOID_Z - missing_z
+        missing_y = 11
+        y_stop = BOSS_CUBOID_Y - missing_y
+        missing_x = 7
+        x_stop = BOSS_CUBOID_X - missing_x
+        partial_cuboid = np.random.randint(0, 256, (1, z_stop, y_stop, x_stop), 'uint8')
+
+        chunk = MagicMock(spec=np.ndarray)
+        chunk.__getitem__.return_value = partial_cuboid
+
+        expected_cuboid = np.pad(partial_cuboid, ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)), 'constant', constant_values=0)
+
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+
+        engine = Engine(self.config_file, self.api_token, 23)
+        self.setup_helper.add_volumetric_tasks(
+            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+
+        engine.join()
+
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, TZYX_ORDER)
+
+        s3 = boto3.resource('s3')
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
+
+        with tempfile.NamedTemporaryFile() as test_file:
+            with open(test_file.name, 'wb') as raw_data:
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+            with open(test_file.name, 'rb') as raw_data:
+                # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
+                cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
+                assert expected_cuboid.shape == cuboid.shape
+                assert np.array_equal(expected_cuboid, cuboid)
+
+    def test_upload_cuboid_partial_cuboid_xyzt_order(self):
+        missing_z = 3
+        z_stop = BOSS_CUBOID_Z - missing_z
+        missing_y = 11
+        y_stop = BOSS_CUBOID_Y - missing_y
+        missing_x = 7
+        x_stop = BOSS_CUBOID_X - missing_x
+        partial_cuboid = np.random.randint(0, 256, (x_stop, y_stop, z_stop, 1), 'uint8')
+
+        chunk = MagicMock(spec=np.ndarray)
+        chunk.__getitem__.return_value = partial_cuboid
+
+        expected_cuboid = np.pad(np.transpose(partial_cuboid), ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)), 'constant', constant_values=0)
+
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+
+        engine = Engine(self.config_file, self.api_token, 23)
+        self.setup_helper.add_volumetric_tasks(
+            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+
+        engine.join()
+
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZT_ORDER)
+
+        s3 = boto3.resource('s3')
+        ingest_bucket = s3.Bucket(self.ingest_bucket_name)
+
+        with tempfile.NamedTemporaryFile() as test_file:
+            with open(test_file.name, 'wb') as raw_data:
+                ingest_bucket.download_fileobj(VOLUMETRIC_CUBOID_KEY, raw_data)
+            with open(test_file.name, 'rb') as raw_data:
+                # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
+                cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
+                assert expected_cuboid.shape == cuboid.shape
+                assert np.array_equal(expected_cuboid, cuboid)
 
     def s3_object_to_cuboid(self, raw_data, data_type):
         data = blosc.decompress(raw_data)
