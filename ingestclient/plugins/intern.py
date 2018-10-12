@@ -16,7 +16,7 @@ import six
 from PIL import Image
 from intern.remote.boss import BossRemote
 from intern.resource.boss.resource import ChannelResource
-from intern.service.boss.volume import CacheMode
+from intern.service.boss.baseversion import CacheMode
 import numpy as np
 import time
 
