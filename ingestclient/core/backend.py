@@ -426,7 +426,8 @@ class BossBackend(Backend):
 
                     self.setup_upload_queue(creds, queue, region="us-east-1")
                     self.setup_tile_bucket(creds, tile_bucket, region="us-east-1")
-                    self.setup_volumetric_bucket(creds, result["ingest_bucket_name"], region="us-east-1")
+                    if "ingest_bucket_name" in result:
+                        self.setup_volumetric_bucket(creds, result["ingest_bucket_name"], region="us-east-1")
 
                     return job_status, creds, queue, tile_bucket, params, num_tiles
 
