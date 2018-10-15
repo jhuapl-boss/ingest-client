@@ -218,6 +218,24 @@ class Engine(object):
         """
         return self.backend.complete(self.ingest_job_id)
 
+    def _get_units(self):
+        """Get appropriate units (tiles or chunks) for reporting status
+        
+        Returns:
+            (str): 'tiles' or 'chunks'
+
+        Raises:
+            (ValueError): if ingest_type is unknown
+        """
+        if ("ingest_type" not in self.config.config_data["ingest_job"] or
+                self.config.config_data["ingest_job"]["ingest_type"] == "tile"):
+            return "tile"
+        elif self.config.config_data["ingest_job"]["ingest_type"] == "volumetric":
+            return "chunks"
+
+        raise ValueError("Invalid ingest_type: {}".format(
+            self.config.config_data["ingest_job"]["ingest_type"]))
+
     def monitor(self, workers):
         """Method to monitor the progress of the ingest job
 
@@ -229,6 +247,8 @@ class Engine(object):
         start_time = time.time()
         print_time = time.time()
         avg_tile_rate = 0
+        units = self._get_units()
+
         while True:
             total_seconds = (datetime.datetime.now() - self.credential_create_time).total_seconds()
             if total_seconds > self.backend.credential_timeout:
@@ -253,9 +273,10 @@ class Engine(object):
                 # Print an update every 30 seconds
                 if status:
                     if status["current_message_count"] != 0:
-                        log_str = "Uploading ~{:.2f} tiles/min".format(avg_tile_rate * 6)
-                        log_str += " - Approx {:d} of {:d} tiles remaining".format(status["current_message_count"],
-                                                                                   status["total_message_count"])
+                        log_str = "Uploading ~{:.2f} {}/min".format(avg_tile_rate * 6, units)
+                        log_str += " - Approx {:d} of {:d} {} remaining".format(status["current_message_count"],
+                                                                                status["total_message_count"],
+                                                                                units)
                         log_str += " - Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60)
                         always_log_info(log_str)
                     else:
