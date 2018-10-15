@@ -66,6 +66,6 @@ class TestCloudVolume(unittest.TestCase):
         exceeded.
         """
         foo = None
-        chunk, order = self.chunk_procesor.process(foo, 1024, 1024, 64)
+        chunk, order = self.chunk_procesor.process(foo, 1, 1, 1)
         expected = (12, 2, 14, 1)
         self.assertEqual(expected, chunk.shape)
