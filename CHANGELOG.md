@@ -1,5 +1,12 @@
 # Boss Ingest Client Changelog
 
+## 0.9.12
+
+### Implemented Enhancements:
+
+* Added ability to volumetric ingest jobs using Princeton's CloudVolume data format.
+
+
 ## 0.9.11
 
 ### Fixed Bug:
