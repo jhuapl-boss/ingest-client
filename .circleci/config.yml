@@ -24,14 +24,12 @@ jobs:
             name: Installing pip requirements at top level
             command: |
                 sudo pip install -r requirements.txt
-
-        -run:
-            name: Install pip requirements at plugins level
-            command: | 
-              cd ingestclient/plugins/requirements 
-              sudo pip install -r cloudvolume_requirements.txt
-
-
+                
+        - run:
+            name: Installing pip requirements at plugins level
+            command: |
+                cd cd ingestclient/plugins/requirements/
+                sudo pip install -r cloudvolume_requirements.txt
 
         - save_cache:
             paths:
@@ -56,7 +54,3 @@ jobs:
         - store_artifacts:
             path: /tmp
             destination: unittest_results.txt
-
-
-
-
