@@ -1,0 +1,59 @@
+# Python CircleCI 2.0 configuration file
+#
+
+version: 2
+
+jobs:
+  build:
+    working_directory: ~/ingest-client
+    docker:
+      - image: circleci/python:3.6.5
+
+    steps:
+        - checkout
+        
+        - run: mkdir test-reports
+        
+        - restore_cache:  # ensure this step occurs *before* installing dependencies
+
+            keys:
+                - cache-{{ checksum "requirements.txt" }}
+                - cache-
+                
+        - run:
+            name: Installing pip requirements
+            command: |
+                sudo pip install -r requirements.txt
+
+                
+
+        - save_cache:
+            paths:
+                - ~/.local
+                - ~/.cache
+            key: cache-{{ checksum "requirements.txt" }}
+
+
+        ####  Run Tests
+
+        - run:
+            name: Running tests ... python unit tests [pipe stdout/err to results.txt]
+            command: |
+                python -m unittest -v  &> /tmp/unittest_results.txt
+
+
+
+        - run:
+            name: Running tests ... nose2 (on fail)
+            command: |
+                nose2
+            when: on_fail
+
+
+        - store_artifacts:
+            path: /tmp
+            destination: unittest_results.txt
+
+
+
+
