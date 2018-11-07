@@ -50,10 +50,8 @@ jobs:
               python -m unittest -v  &> /tmp/unittest_results.txt
 
         - run:
-            name: Running tests ... nose2 (on fail)
-            command: |
-              nose2
-            when: on_fail
+            name: Running tests ... nose2 (another perspective)
+            command: nose2
 
 
         - store_artifacts:
