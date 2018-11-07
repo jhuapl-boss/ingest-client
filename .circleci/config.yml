@@ -9,37 +9,36 @@ jobs:
       - image: circleci/python:3.6.5
 
     steps:
-        - checkout
+      - checkout
         
-        - run: mkdir test-reports
+      - run: mkdir test-reports
         
         - restore_cache:  # ensure this step occurs *before* installing dependencies
-
             keys:
-                - cache-{{ checksum "requirements.txt" }}
-                - cache-
+              - cache-{{ checksum "requirements.txt" }}
+              - cache-
                 
         - run:
             name: Installing pip requirements at top level
             command: |
-                sudo pip install -r requirements.txt
+              sudo pip install -r requirements.txt
                 
         - run:
             name: Installing pip requirements at plugins level
             command: |
-                cd ingestclient/plugins/requirements/
-                sudo pip install -r cloudvolume_requirements.txt
+              cd ingestclient/plugins/requirements/
+              sudo pip install -r cloudvolume_requirements.txt
 
         -run:
             name: Setup Dummy AWS creds
             command: |
-                mkdir ~/.aws
-                echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
+              mkdir ~/.aws
+              echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
                   
         - save_cache:
             paths:
-                - ~/.local
-                - ~/.cache
+              - ~/.local
+              - ~/.cache
             key: cache-{{ checksum "requirements.txt" }}
 
         ####  Run Tests
@@ -47,12 +46,12 @@ jobs:
         - run:
             name: Running tests ... python unit tests [pipe stdout/err to results.txt]
             command: |
-                python -m unittest -v  &> /tmp/unittest_results.txt
+              python -m unittest -v  &> /tmp/unittest_results.txt
 
         - run:
             name: Running tests ... nose2 (on fail)
             command: |
-                nose2
+              nose2
             when: on_fail
 
 
