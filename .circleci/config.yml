@@ -9,9 +9,9 @@ jobs:
       - image: circleci/python:3.6.5
 
     steps:
-      - checkout
+        - checkout
         
-      - run: mkdir test-reports
+        - run: mkdir test-reports
         
         - restore_cache:  # ensure this step occurs *before* installing dependencies
             keys:
