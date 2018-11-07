@@ -30,7 +30,7 @@ import time
 import logging
 
 
-def get_confirmation(prompt, force=False):
+def get_confirmation(prompt, force=False,black=False):
     """Method to confirm decisions
 
     Args:
@@ -43,6 +43,9 @@ def get_confirmation(prompt, force=False):
     if not force:
         decision = False
         while True:
+            if black:
+                print("All missing tiles will be replaced with black tiles.")
+                print("Please NOTE: The -b flag is only supported by the ZStack plugin")
             confirm = input("{} (y/n): ".format(prompt))
             if confirm.lower() == "y":
                 decision = True
@@ -58,7 +61,7 @@ def get_confirmation(prompt, force=False):
         return True
 
 
-def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=None):
+def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=None, black=False):
     """A worker process main execution function. Generates an engine, and joins the job
        (that was either created by the main process or joined by it).
        Ends when no more tasks are left that can be executed.
@@ -81,7 +84,8 @@ def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=
         engine = Engine(config_file=config_file, 
                         configuration=configuration,
                         backend_api_token=api_token, 
-                        ingest_job_id=job_id)
+                        ingest_job_id=job_id,
+                        black=black)
     except ConfigFileError as err:
         print("ERROR (pid: {}): {}".format(os.getpid(), err))
         sys.exit(1)
@@ -138,6 +142,8 @@ def get_parser():
     parser.add_argument("--processes_nb", "-p", type=int,
                         default=1,
                         help="The number of client processes that will upload the images of the ingest job.")
+    parser.add_argument("--sub_black", "-b" , action='store_true',
+                        help="Flag indicating to substitute non-existant tile with black tile. Only supported by the zStack plugin.")
     parser.add_argument("config_file", nargs='?', help="Path to the ingest job configuration file")
 
     return parser
@@ -161,7 +167,7 @@ def start_workers(ingest_job_id, args, configuration):
         new_pipe = mp.Pipe(False)
         new_process = mp.Process(target=worker_process_run, 
                                  args=(args.api_token, ingest_job_id, new_pipe[0]),
-                                 kwargs={'config_file': args.config_file, 'configuration': configuration}
+                                 kwargs={'config_file': args.config_file, 'configuration': configuration, 'black': args.sub_black}
                                  )
         workers.append((new_process, new_pipe[1]))
         new_process.start()
@@ -351,13 +357,13 @@ def main(configuration=None, parser_args=None):
             # Creating a new session - make sure the user wants to do this.
             print_estimated_job(config_file=args.config_file, configuration=configuration)
             print("\n")
-            if not get_confirmation("Would you like to create a NEW ingest job?", args.force):
+            if not get_confirmation("Would you like to create a NEW ingest job?", args.force, args.sub_black):
                 # Don't want to create a new job
                 print("Exiting")
                 sys.exit(0)
         else:
             # Resuming a session - make sure the user wants to do this.
-            if not get_confirmation("Are you sure you want to resume ingest job {}?".format(args.job_id), args.force):
+            if not get_confirmation("Are you sure you want to resume ingest job {}?".format(args.job_id), args.force, args.sub_black):
                 # Don't want to resume
                 print("Exiting")
                 sys.exit(0)

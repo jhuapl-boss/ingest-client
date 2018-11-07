@@ -24,7 +24,7 @@ from .config import Configuration, ConfigFileError
 from collections import deque
 
 class Engine(object):
-    def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None):
+    def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None, black=False):
         """
         A class to implement the core upload client workflow engine
 
@@ -55,6 +55,7 @@ class Engine(object):
         self.access_denied_count = 0
         self.invalid_access_key = False
         self.invalid_access_key_count = 0
+        self.black = black
 
         if configuration:
             self.configure(configuration)
@@ -256,7 +257,7 @@ class Engine(object):
             if alive_cnt == 0:
                 # if no processes are alive you are done (or something broke)! Bail.
                 break
-
+                
     def run(self):
         """Method to run the upload loop
 
@@ -333,11 +334,23 @@ class Engine(object):
                                                    key_parts["t_index"])
 
             # Call tile processor
-            handle = self.tile_processor.process(filename,
-                                                 key_parts["x_index"],
-                                                 key_parts["y_index"],
-                                                 key_parts["z_index"],
-                                                 key_parts["t_index"])
+            if self.black:
+                try:
+                    handle = self.tile_processor.process(filename,
+                                                        key_parts["x_index"],
+                                                        key_parts["y_index"],
+                                                        key_parts["z_index"],
+                                                        key_parts["t_index"],
+                                                        self.black)
+                except Exception as e:
+                    raise e
+            else:
+                handle = self.tile_processor.process(filename,
+                                                    key_parts["x_index"],
+                                                    key_parts["y_index"],
+                                                    key_parts["z_index"],
+                                                    key_parts["t_index"],
+                                                    black)
 
             try:
                 metadata = {'chunk_key': msg['chunk_key'],

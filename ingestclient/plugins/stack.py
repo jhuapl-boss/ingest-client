@@ -16,6 +16,7 @@ import six
 from PIL import Image
 import re
 import os
+import numpy as np
 
 from ..utils.filesystem import DynamicFilesystem
 from .path import PathProcessor
@@ -123,7 +124,7 @@ class ZindexStackTileProcessor(TileProcessor):
         self.parameters = parameters
         self.fs = DynamicFilesystem(parameters['filesystem'], parameters)
 
-    def process(self, file_path, x_index, y_index, z_index, t_index=0):
+    def process(self, file_path, x_index, y_index, z_index, t_index=0, black=False):
         """
         Method to load the image file. Can break the image into smaller tiles to help make ingest go smoother, but
         currently must be perfectly divisible
@@ -140,7 +141,16 @@ class ZindexStackTileProcessor(TileProcessor):
 
         """
         # Load tile
-        file_handle = self.fs.get_file(file_path)
+        try:
+            file_handle = self.fs.get_file(file_path)
+        except FileNotFoundError as e:
+            if black:
+                blackTile = np.zeros((self.parameters["ingest_job"]["tile_size"]["x"],self.parameters["ingest_job"]["tile_size"]["y"]))
+                img = Image.fromarray(blackTile, 'RGB')
+                img.save('blacktile.png')
+                file_handle="./blacktile.png"
+            else:
+                raise e
 
         x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
                    self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
