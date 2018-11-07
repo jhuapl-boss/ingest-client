@@ -29,7 +29,7 @@ jobs:
               cd ingestclient/plugins/requirements/
               sudo pip install -r cloudvolume_requirements.txt
 
-        -run:
+        - run:
             name: Setup Dummy AWS creds
             command: |
               mkdir ~/.aws
