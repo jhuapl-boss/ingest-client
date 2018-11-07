@@ -28,13 +28,7 @@ jobs:
             command: |
               cd ingestclient/plugins/requirements/
               sudo pip install -r cloudvolume_requirements.txt
-
-        - run:
-            name: Setup Dummy AWS creds
-            command: |
-              mkdir ~/.aws
-              echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
-                  
+                
         - save_cache:
             paths:
               - ~/.local
@@ -42,6 +36,13 @@ jobs:
             key: cache-{{ checksum "requirements.txt" }}
 
         ####  Run Tests
+
+        - run:
+            name: Setup Dummy AWS creds
+            command: |
+              mkdir ~/.aws
+              echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
+              echo -e "[default]\nregion = us-east-1\noutput = json" > ~/.aws/config        
 
         - run:
             name: Running tests ... python unit tests [pipe stdout/err to results.txt]
