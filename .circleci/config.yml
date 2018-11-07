@@ -31,6 +31,12 @@ jobs:
                 cd ingestclient/plugins/requirements/
                 sudo pip install -r cloudvolume_requirements.txt
 
+        -run:
+            name: Setup Dummy AWS creds
+            command: |
+                  mkdir ~/.aws
+                  echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
+                  
         - save_cache:
             paths:
                 - ~/.local
