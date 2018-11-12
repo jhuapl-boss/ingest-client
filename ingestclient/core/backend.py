@@ -30,6 +30,15 @@ from ..utils.log import always_log_info
 
 @six.add_metaclass(ABCMeta)
 class Backend(object):
+    """
+
+    Attributes:
+        config (dict):
+        sqs:
+        s3 (boto3.S3)::
+        bucket (S3.Bucket): Tile bucket.
+        volumetric_bucket (S3.Bucket): Temporary cuboid holding bucket for volumetric ingests.
+    """
     def __init__(self, config):
         """
         A class to implement a backend that supports the ingest service
@@ -43,6 +52,7 @@ class Backend(object):
         self.queue = None
         self.s3 = None
         self.bucket = None
+        self.volumetric_bucket = None
 
     @abstractmethod
     def setup(self):
@@ -173,7 +183,7 @@ class Backend(object):
         Args:
             credentials(dict): AWS credentials
             tile_bucket(str): The name of the bucket
-            region(str): The AWS region where the SQS queue exists
+            region(str): The AWS region where the bucket exists
 
         Returns:
             None
@@ -182,6 +192,23 @@ class Backend(object):
         self.s3 = boto3.resource('s3', region_name=region, aws_access_key_id=credentials["access_key"],
                                  aws_secret_access_key=credentials["secret_key"])
         self.bucket = self.s3.Bucket(tile_bucket)
+
+    def setup_volumetric_bucket(self, credentials, bucket_name, region="us-east-1"):
+        """
+        Method to create a connection to the tile bucket
+
+        Args:
+            credentials(dict): AWS credentials
+            bucket_name(str): The name of the bucket
+            region(str): The AWS region where the bucket exists
+
+        Returns:
+            None
+
+        """
+        self.s3 = boto3.resource('s3', region_name=region, aws_access_key_id=credentials["access_key"],
+                                 aws_secret_access_key=credentials["secret_key"])
+        self.volumetric_bucket = self.s3.Bucket(bucket_name)
 
     @abstractmethod
     def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
@@ -399,6 +426,8 @@ class BossBackend(Backend):
 
                     self.setup_upload_queue(creds, queue, region="us-east-1")
                     self.setup_tile_bucket(creds, tile_bucket, region="us-east-1")
+                    if "ingest_bucket_name" in result:
+                        self.setup_volumetric_bucket(creds, result["ingest_bucket_name"], region="us-east-1")
 
                     return job_status, creds, queue, tile_bucket, params, num_tiles
 
@@ -496,6 +525,51 @@ class BossBackend(Backend):
         else:
             return None, None, None
 
+    def delete_task(self, msg_id, receipt_handle):
+        """
+        Delete a message from the upload queue
+
+        This is only used for volumetric ingests.
+
+        Args:
+            msg_id (str): Id of queue message.
+            receipt_handle (str): Actual id required to delete the message.
+
+        Returns:
+            (bool): True on success.
+
+        Raises:
+            (Exception): Raised after n consecutive ClientErrors.
+        """
+        MAX_TRIES = 20
+        try_cnt = 0
+        while try_cnt < MAX_TRIES - 1:
+            try:
+                resp = self.queue.delete_messages(Entries=[{'Id': msg_id, 'ReceiptHandle': receipt_handle}])
+                if 'Successful' in resp and len(resp['Successful']) > 0:
+                    if resp['Successful'][0]['Id'] == msg_id:
+                        return True
+
+                # Failed for some reason.
+                try_cnt += 1
+                if 'Failed' in resp and len(resp['Failed']) > 0:
+                    err = resp['Failed'][0]
+                    always_log_info('Failed deleting message from queue: ({}) - {}'.format(err['Code'], err['Message']))
+                    if err['SenderFault']:
+                        # If it's our fault, give up.
+                        break
+
+                time.sleep(5)
+            except botocore.exceptions.ClientError:
+                print("(pid={}) Waiting for credentials to be valid".format(os.getpid()))
+                try_cnt += 1
+                time.sleep(15)
+
+                if try_cnt >= MAX_TRIES:
+                    raise Exception("(pid={}) Credentials failed to be come valid".format(os.getpid()))
+
+        return False
+
     def get_job_status(self, ingest_job_id):
         """
         Method to get the job status
@@ -541,11 +615,11 @@ class BossBackend(Backend):
     def encode_chunk_key(self, num_tiles, project_info, resolution, x_index, y_index, z_index, t_index=0):
         """A method to create a chunk key.
 
-        A "chunk" is the group of tiles that must be uploaded so a cuboid can be ingested.  The chunk key is used
-        to track all tiles in a given group.
+        A "chunk" is either a single 3D volume or a group of tiles that must be uploaded so cuboids can be ingested.  The chunk key
+        identifies the 3D volume or all tiles in a given group.
 
         Args:
-            num_tiles(int): The expected number of tiles in this chunk (in the z-dimension). Useful for forcing ingest of partial cuboids
+            num_tiles(int): The expected number of tiles in this chunk (in the z-dimension). Useful for forcing ingest of partial cuboids.  For a 3D volume, its value is 1.
             project_info(list): A list of strings containing the project/data model information for where data belongs
             resolution(int): The level of the resolution hierarchy.  Typically 0
             x_index(int): The x tile index
@@ -591,8 +665,6 @@ class BossBackend(Backend):
 
     def decode_chunk_key(self, key):
         """A method to decode the chunk key
-
-        The tile key is the key used for each individual tile file.
 
         Args:
             key(str): The key to decode

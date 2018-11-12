@@ -15,6 +15,7 @@ from __future__ import absolute_import
 from ingestclient.core.backend import BossBackend, Backend
 from ingestclient.test.aws import Setup
 
+import boto3
 import os
 import unittest
 import json
@@ -32,7 +33,7 @@ class ResponsesMixin(object):
 
     def tearDown(self):
         super(ResponsesMixin, self).tearDown()
-        responses._default_mock.__exit__()
+        responses._default_mock.__exit__(None, None, None)
 
     def add_default_response(self):
         mocked_repsonse = {"id": 23}
@@ -122,6 +123,11 @@ class BossBackendTestMixin(object):
         b = BossBackend(self.example_config_data)
         b.setup(self.api_token)
 
+        # Make sure queue is empty.
+        sqs = boto3.resource('sqs')
+        queue = sqs.Queue(self.queue_url)
+        queue.purge()
+
         # Put some stuff on the task queue
         self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, b)
 
@@ -137,6 +143,24 @@ class BossBackendTestMixin(object):
         assert isinstance(msg_id, str)
         assert isinstance(rx_handle, str)
         assert msg_body == self.setup_helper.test_msg[1]
+
+    def test_delete_task(self):
+        b = BossBackend(self.example_config_data)
+        b.setup(self.api_token)
+
+        # Make sure queue is empty.
+        sqs = boto3.resource('sqs')
+        queue = sqs.Queue(self.queue_url)
+        queue.purge()
+
+        # Put some stuff on the task queue
+        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, b)
+
+        # Join and get a task
+        b.join(23)
+        msg_id, rx_handle, msg_body = b.get_task()
+
+        assert b.delete_task(msg_id, rx_handle)
 
     def test_encode_tile_key(self):
         """Test encoding an object key"""

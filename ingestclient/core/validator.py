@@ -15,6 +15,7 @@ from abc import ABCMeta, abstractmethod
 import six
 import jsonschema
 import json
+from .consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z 
 
 
 @six.add_metaclass(ABCMeta)
@@ -101,6 +102,8 @@ class Validator(object):
         """
         if validator_str == "BossValidatorV01":
             return BossValidatorV01(config_data)
+        if validator_str == "BossValidatorV02":
+            return BossValidatorV02(config_data)
         else:
             return ValueError("Unsupported validator: {}".format(validator_str))
 
@@ -140,3 +143,63 @@ class BossValidatorV01(Validator):
         # Check backend connectivity
 
         return ['Parameter Validation Passed'], [], []
+
+
+class BossValidatorV02(Validator):
+    def __init__(self, config_data):
+        """
+        A class to implement the ingest job configuration file validator for the Boss (docs.theBoss.io)
+
+        Args:
+            config_data(dict): Configuration dictionary
+
+        """
+        Validator.__init__(self, config_data)
+
+    def validate_properties(self):
+        """
+        Method to validate any custom properties beyond verifying that the schema was used correctly
+
+        Args:
+
+        Returns:
+            (list(str), list(str), list(str)): a tuple of lists containing "info", "question", "error" messages
+
+        """
+        # TODO: Add Boss specific validation
+        # Verify Collection
+
+        # Verify Experiment
+
+        # Verify Channel
+
+        # If channel already exists, check corners to see if data exists.  If so question user for overwrite
+
+        # Check tile size - error if too big
+
+        # Check backend connectivity
+
+        errors = []
+
+        if self.config['ingest_job']['ingest_type'] == 'tile':
+            if not 'tile_size' in self.config['ingest_job']:
+                errors.append('"ingest_job": "tile_size" required for tile ingest jobs.')
+            if not 'tile_processor' in self.config['client']:
+                errors.append('"client": "tile_processor" required for tile ingest jobs.')
+        elif self.config['ingest_job']['ingest_type'] == 'volumetric':
+            if not 'chunk_size' in self.config['ingest_job']:
+                errors.append('"ingest_job": "chunk_size" required for volumetric ingest jobs.')
+            else:
+                if self.config['ingest_job']['chunk_size']['x'] % BOSS_CUBOID_X != 0:
+                    errors.append('"ingest_job": "chunk_size": "x" must be a multiple of {}.'.format(BOSS_CUBOID_X))
+                if self.config['ingest_job']['chunk_size']['y'] % BOSS_CUBOID_Y != 0:
+                    errors.append('"ingest_job": "chunk_size": "y" must be a multiple of {}.'.format(BOSS_CUBOID_Y))
+                if self.config['ingest_job']['chunk_size']['z'] % BOSS_CUBOID_Z != 0:
+                    errors.append('"ingest_job": "chunk_size": "z" must be a multiple of {}.'.format(BOSS_CUBOID_Z))
+            if not 'chunk_processor' in self.config['client']:
+                errors.append('"client": "chunk_processor" required for volumetric ingest jobs.')
+
+        if len(errors) == 0:
+            return ['Parameter Validation Passed'], [], errors
+
+        return ["Configuration file schema validation - Failed"], [], errors

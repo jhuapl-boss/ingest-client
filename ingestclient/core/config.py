@@ -391,15 +391,32 @@ class Configuration(object):
             None
         """
         # Create plugin instances
-        package, class_name = self.config_data["client"]["tile_processor"]["class"].rsplit('.', 1)
-        tile_module = importlib.import_module(package)
-        tile_class = getattr(tile_module, class_name)
-        self.tile_processor_class = tile_class()
+        if "tile_processor" in self.config_data["client"]:
+            package, class_name = self.config_data["client"]["tile_processor"]["class"].rsplit('.', 1)
+            tile_module = importlib.import_module(package)
+            tile_class = getattr(tile_module, class_name)
+            self.tile_processor_class = tile_class()
+
+        if "chunk_processor" in self.config_data["client"]:
+            package, class_name = self.config_data["client"]["chunk_processor"]["class"].rsplit('.', 1)
+            chunk_module = importlib.import_module(package)
+            chunk_class = getattr(chunk_module, class_name)
+            self.chunk_processor_class = chunk_class()
 
         package, class_name = self.config_data["client"]["path_processor"]["class"].rsplit('.', 1)
         path_module = importlib.import_module(package)
         path_class = getattr(path_module, class_name)
         self.path_processor_class = path_class()
+
+    def get_chunk_processor_params(self):
+        """Method to get the chunk processor parameter dictionary
+
+        Returns:
+            (dict): Dictionary of params from the config file
+        """
+        params = self.config_data["client"]["chunk_processor"]["params"]
+        params["ingest_job"] = self.config_data["ingest_job"]
+        return params
 
     def get_tile_processor_params(self):
         """Method to get the tile processor parameter dictionary

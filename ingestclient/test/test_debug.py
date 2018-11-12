@@ -32,7 +32,7 @@ class ResponsesMixin(object):
 
     def tearDown(self):
         super(ResponsesMixin, self).tearDown()
-        responses._default_mock.__exit__()
+        responses._default_mock.__exit__(None, None, None)
 
     def add_default_response(self):
         mocked_repsonse = {"id": 23}
