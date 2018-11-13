@@ -43,9 +43,10 @@ jobs:
               echo -e "[default]\nregion = us-east-1\noutput = json" > ~/.aws/config        
 
         - run:
-            name: Running py3 tests ... python unit tests [pipe stdout/err to results.txt]
+            name: Running py3 tests ... python unit tests 
             command: |
               pwd
+              ls -al
               python -V
               python -m unittest -v  
 
@@ -97,9 +98,10 @@ jobs:
               echo -e "[default]\nregion = us-east-1\noutput = json" > ~/.aws/config        
 
         - run:
-            name: Running py2 tests ... python unit tests [pipe stdout/err to results.txt]
+            name: Running py2 tests ... python unit tests 
             command: |
               pwd
+              ls -al
               python -V
               python -m unittest -v  
               
