@@ -103,7 +103,7 @@ jobs:
               pwd
               ls -al
               python -V
-              python -m unittest -v  
+              python -m unittest discover -v  
               
 
 
