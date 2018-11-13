@@ -107,10 +107,6 @@ jobs:
             command: |
               python -m unittest -v  &> /tmp/unittest_results_py2.txt
 
-        - run:
-            name: Running tests ... nose2 (another perspective)
-            command: nose2
-
 
         - store_artifacts:
             path: /test-results
