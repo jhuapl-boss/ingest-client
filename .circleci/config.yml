@@ -3,8 +3,9 @@
 version: 2
 
 jobs:
-  build:
-    working_directory: ~/ingest-client
+
+  test_py3:
+    working_directory: ~/py3
     docker:
       - image: circleci/python:3.6.5
 
@@ -26,8 +27,9 @@ jobs:
         - run:
             name: Installing pip requirements at plugins level
             command: |
-              cd ingestclient/plugins/requirements/
-              sudo pip install -r cloudvolume_requirements.txt
+              #cd ingestclient/plugins/requirements/
+              #sudo pip install -r cloudvolume_requirements.txt
+              sudo pip install -r ingestclient/plugins/requirements/cloudvolume_requirements.txt
                 
         - save_cache:
             paths:
@@ -47,7 +49,7 @@ jobs:
         - run:
             name: Running tests ... python unit tests [pipe stdout/err to results.txt]
             command: |
-              python -m unittest -v  &> /tmp/unittest_results.txt
+              python -m unittest -v  &> /tmp/unittest_results_py3.txt
 
         - run:
             name: Running tests ... nose2 (another perspective)
@@ -55,5 +57,68 @@ jobs:
 
 
         - store_artifacts:
-            path: /tmp
-            destination: unittest_results.txt
+            path: /test-results
+            destination: py3
+
+  test_py2:
+    working_directory: ~/py2
+    docker:
+      - image: circleci/python:2.7.15
+
+    steps:
+        - checkout
+        
+        - run: mkdir test-reports
+        
+        - restore_cache:  # ensure this step occurs *before* installing dependencies
+            keys:
+              - cache-{{ checksum "requirements.txt" }}
+              - cache-
+                
+        - run:
+            name: Installing pip requirements at top level
+            command: |
+              sudo pip install -r requirements.txt
+                
+        - run:
+            name: Installing pip requirements at plugins level
+            command: |
+              #cd ingestclient/plugins/requirements/
+              #sudo pip install -r cloudvolume_requirements.txt
+              sudo pip install -r ingestclient/plugins/requirements/cloudvolume_requirements.txt
+                
+        - save_cache:
+            paths:
+              - ~/.local
+              - ~/.cache
+            key: cache-{{ checksum "requirements.txt" }}
+
+        ####  Run Tests
+
+        - run:
+            name: Setup Dummy AWS creds
+            command: |
+              mkdir ~/.aws
+              echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
+              echo -e "[default]\nregion = us-east-1\noutput = json" > ~/.aws/config        
+
+        - run:
+            name: Running tests ... python unit tests [pipe stdout/err to results.txt]
+            command: |
+              python -m unittest -v  &> /tmp/unittest_results_py2.txt
+
+        - run:
+            name: Running tests ... nose2 (another perspective)
+            command: nose2
+
+
+        - store_artifacts:
+            path: /test-results
+            destination: py2
+
+workflows:
+  version: 2
+  test_py_2_and_3:
+    jobs:
+      - test_py3
+      - test_py2
