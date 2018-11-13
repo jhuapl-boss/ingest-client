@@ -12,8 +12,6 @@ jobs:
     steps:
         - checkout
         
-        - run: mkdir test-results
-        
         - restore_cache:  # ensure this step occurs *before* installing dependencies
             keys:
               - cache-{{ checksum "requirements.txt" }}
@@ -47,9 +45,9 @@ jobs:
         - run:
             name: Running py3 tests ... python unit tests [pipe stdout/err to results.txt]
             command: |
+              pwd
               python -V
               python -m unittest -v  
-              #&> test-results/unittest_results_py3.txt
 
         - run:
             name: Running py3 tests ... nose2 (another perspective)
@@ -57,8 +55,8 @@ jobs:
 
 
         - store_artifacts:
-            path: test-results
-            destination: py3
+            path: /tmp
+            destination: py3_tests
 
   test_py2:
     working_directory: ~/py2
@@ -67,8 +65,6 @@ jobs:
 
     steps:
         - checkout
-        
-        - run: mkdir test-results
         
         - restore_cache:  # ensure this step occurs *before* installing dependencies
             keys:
@@ -103,14 +99,15 @@ jobs:
         - run:
             name: Running py2 tests ... python unit tests [pipe stdout/err to results.txt]
             command: |
+              pwd
               python -V
               python -m unittest -v  
-              #&> test-results/unittest_results_py2.txt
+              
 
 
         - store_artifacts:
-            path: test-results
-            destination: py2
+            path: /tmp
+            destination: py2_tests
 
 workflows:
   version: 2
