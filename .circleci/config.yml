@@ -49,7 +49,7 @@ jobs:
         - run:
             name: Running tests ... python unit tests [pipe stdout/err to results.txt]
             command: |
-              python -m unittest -v  &> /tmp/unittest_results_py3.txt
+              python -m unittest -v  &> /test-results/unittest_results_py3.txt
 
         - run:
             name: Running tests ... nose2 (another perspective)
@@ -105,7 +105,7 @@ jobs:
         - run:
             name: Running tests ... python unit tests [pipe stdout/err to results.txt]
             command: |
-              python -m unittest -v  &> /tmp/unittest_results_py2.txt
+              python -m unittest -v  &> /test-results/unittest_results_py2.txt
 
 
         - store_artifacts:
