@@ -12,7 +12,7 @@ jobs:
     steps:
         - checkout
         
-        - run: mkdir test-results
+        - run: mkdir /test-results
         
         - restore_cache:  # ensure this step occurs *before* installing dependencies
             keys:
@@ -68,7 +68,7 @@ jobs:
     steps:
         - checkout
         
-        - run: mkdir test-results
+        - run: mkdir /test-results
         
         - restore_cache:  # ensure this step occurs *before* installing dependencies
             keys:
