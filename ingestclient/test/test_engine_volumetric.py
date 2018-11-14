@@ -27,8 +27,10 @@ import unittest
 import sys
 #This was added mainly to support python 2.7 testing as well
 if sys.version_info >= (3, 3):
+    #python 3
     from unittest.mock import MagicMock
 else:
+    #python 2
     from mock import MagicMock
 
 import json

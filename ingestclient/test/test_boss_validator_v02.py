@@ -33,6 +33,8 @@ class TestValidateConfig(unittest.TestCase):
         super(TestValidateConfig, self).__init__(*args, **kwargs)
         #Then account for python 2.7 difference in the function call
         if sys.version_info < (3, 3):
+            #Back in python 2, the func was called "assertRegexpMatches".
+            # So to make current (py3) life easy, let's just equate the py2 version to our current impl
             self.assertRegex = self.assertRegexpMatches
 
     def get_skeleton_config(self):
