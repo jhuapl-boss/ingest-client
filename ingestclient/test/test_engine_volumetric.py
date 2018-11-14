@@ -17,13 +17,20 @@ from ingestclient.core.engine import Engine
 from ingestclient.core.validator import Validator, BossValidatorV02
 from ingestclient.core.backend import Backend, BossBackend
 from ingestclient.core.config import Configuration, ConfigFileError
-from ingestclient.core.consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z 
-from ingestclient.test.aws import Setup, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY 
+from ingestclient.core.consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z
+from ingestclient.test.aws import Setup, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY
 from ingestclient.plugins.chunk import XYZ_ORDER, ZYX_ORDER, XYZT_ORDER, TZYX_ORDER
 
 import os
 import unittest
-from unittest.mock import MagicMock
+
+import sys
+#This was added mainly to support python 2.7 testing as well
+if sys.version_info >= (3, 3):
+    from unittest.mock import MagicMock
+else:
+    from mock import MagicMock
+
 import json
 import responses
 from pkg_resources import resource_filename
@@ -33,9 +40,9 @@ import blosc
 import numpy as np
 
 
-
 class ResponsesMixin(object):
     """Mixin to setup requests mocking for the test class"""
+
     def setUp(self):
         responses._default_mock.__enter__()
         self.add_default_response()
@@ -47,33 +54,50 @@ class ResponsesMixin(object):
 
     def add_default_response(self):
         mocked_response = {"id": 23}
-        responses.add(responses.POST, 'https://api.theboss.io/latest/ingest/',
-                      json=mocked_response, status=201)
+        responses.add(
+            responses.POST,
+            'https://api.theboss.io/latest/ingest/',
+            json=mocked_response,
+            status=201)
 
-        mocked_response = {"ingest_job": {"id": 23,
-                                          "ingest_queue": "https://aws.com/myqueue1",
-                                          "upload_queue": self.queue_url,
-                                          "status": 1,
-                                          "tile_count": 500,
-                                          },
-                           "ingest_lambda": "my_lambda",
-                           "tile_bucket_name": self.tile_bucket_name,
-                           "ingest_bucket_name": self.ingest_bucket_name,
-                           "KVIO_SETTINGS": {"settings": "go here"},
-                           "STATEIO_CONFIG": {"settings": "go here"},
-                           "OBJECTIO_CONFIG": {"settings": "go here"},
-                           "credentials": self.aws_creds,
-                           "resource": {"resource": "stuff"}
-                           }
-        responses.add(responses.GET, 'https://api.theboss.io/latest/ingest/23',
-                      json=mocked_response, status=200)
+        mocked_response = {
+            "ingest_job": {
+                "id": 23,
+                "ingest_queue": "https://aws.com/myqueue1",
+                "upload_queue": self.queue_url,
+                "status": 1,
+                "tile_count": 500,
+            },
+            "ingest_lambda": "my_lambda",
+            "tile_bucket_name": self.tile_bucket_name,
+            "ingest_bucket_name": self.ingest_bucket_name,
+            "KVIO_SETTINGS": {
+                "settings": "go here"
+            },
+            "STATEIO_CONFIG": {
+                "settings": "go here"
+            },
+            "OBJECTIO_CONFIG": {
+                "settings": "go here"
+            },
+            "credentials": self.aws_creds,
+            "resource": {
+                "resource": "stuff"
+            }
+        }
+        responses.add(
+            responses.GET,
+            'https://api.theboss.io/latest/ingest/23',
+            json=mocked_response,
+            status=200)
 
-        responses.add(responses.DELETE, 'https://api.theboss.io/latest/ingest/23', status=204)
-
+        responses.add(
+            responses.DELETE,
+            'https://api.theboss.io/latest/ingest/23',
+            status=204)
 
 
 class EngineBossTestMixin(object):
-
     def test_create_instance(self):
         """Method to test creating an instance from the factory"""
         engine = Engine(self.config_file, self.api_token)
@@ -131,8 +155,9 @@ class EngineBossTestMixin(object):
         engine.msg_wait_iterations = 0
 
         # Put some stuff on the task queue
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
         engine.run()
@@ -153,39 +178,47 @@ class EngineBossTestMixin(object):
                 assert 0 == unique_vals[0]
 
     def test_upload_cuboid_indexing(self):
-        data = np.random.randint(0, 256, (BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z), 'uint8')
+        data = np.random.randint(
+            0, 256, (BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z), 'uint8')
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = data
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
         x = 1024
         y = 512
         z = 16
-        assert True == engine.upload_cuboid(chunk, x, y, z, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
+        assert True == engine.upload_cuboid(chunk, x, y, z,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
 
-        exp_x = slice(x, x+BOSS_CUBOID_X, None)
-        exp_y = slice(y, y+BOSS_CUBOID_Y, None)
-        exp_z = slice(z, z+BOSS_CUBOID_Z, None)
+        exp_x = slice(x, x + BOSS_CUBOID_X, None)
+        exp_y = slice(y, y + BOSS_CUBOID_Y, None)
+        exp_z = slice(z, z + BOSS_CUBOID_Z, None)
 
         chunk.__getitem__.assert_called_with((exp_x, exp_y, exp_z))
 
     def test_upload_cuboid_random_data_xyzt_order(self):
-        data = np.random.randint(0, 256, (BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z, 1), 'uint8')
+        data = np.random.randint(
+            0, 256, (BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z, 1), 'uint8')
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = data
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZT_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, XYZT_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -199,17 +232,21 @@ class EngineBossTestMixin(object):
                 assert np.array_equal(np.transpose(data), cuboid)
 
     def test_upload_cuboid_random_data_tzyx_order(self):
-        data = np.random.randint(0, 256, (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X), 'uint8')
+        data = np.random.randint(
+            0, 256, (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X), 'uint8')
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = data
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, TZYX_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 2048, 32,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, TZYX_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -223,17 +260,21 @@ class EngineBossTestMixin(object):
                 assert np.array_equal(data, cuboid)
 
     def test_upload_cuboid_random_data_xyz_order(self):
-        data = np.random.randint(0, 256, (BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z), 'uint8')
+        data = np.random.randint(
+            0, 256, (BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z), 'uint8')
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = data
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -244,20 +285,25 @@ class EngineBossTestMixin(object):
             with open(test_file.name, 'rb') as raw_data:
                 # dtype set in boss-v0.2-test.json under chunk_processor.params.info.data_type
                 cuboid = self.s3_object_to_cuboid(raw_data.read(), 'uint8')
-                assert np.array_equal(np.expand_dims(np.transpose(data), 0), cuboid)
+                assert np.array_equal(
+                    np.expand_dims(np.transpose(data), 0), cuboid)
 
     def test_upload_cuboid_random_data_zyx_order(self):
-        data = np.random.randint(0, 256, (BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X), 'uint8')
+        data = np.random.randint(
+            0, 256, (BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X), 'uint8')
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = data
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, ZYX_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, ZYX_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -277,22 +323,31 @@ class EngineBossTestMixin(object):
         y_stop = BOSS_CUBOID_Y - missing_y
         missing_x = 7
         x_stop = BOSS_CUBOID_X - missing_x
-        partial_cuboid = np.random.randint(0, 256, (z_stop, y_stop, x_stop), 'uint8')
+        partial_cuboid = np.random.randint(0, 256, (z_stop, y_stop, x_stop),
+                                           'uint8')
 
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = partial_cuboid
 
-        expected_cuboid = np.pad(np.expand_dims(partial_cuboid, 0), ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)), 'constant', constant_values=0)
+        expected_cuboid = np.pad(
+            np.expand_dims(partial_cuboid, 0),
+            ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)),
+            'constant',
+            constant_values=0)
 
-        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y,
+                                         BOSS_CUBOID_X)
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, ZYX_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, ZYX_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -313,7 +368,8 @@ class EngineBossTestMixin(object):
         y_stop = BOSS_CUBOID_Y - missing_y
         missing_x = 7
         x_stop = BOSS_CUBOID_X - missing_x
-        partial_cuboid = np.random.randint(0, 256, (x_stop, y_stop, z_stop), 'uint8')
+        partial_cuboid = np.random.randint(0, 256, (x_stop, y_stop, z_stop),
+                                           'uint8')
 
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = partial_cuboid
@@ -321,17 +377,22 @@ class EngineBossTestMixin(object):
         expected_cuboid = np.pad(
             np.expand_dims(np.transpose(partial_cuboid), 0),
             ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)),
-            'constant', constant_values=0)
+            'constant',
+            constant_values=0)
 
-        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y,
+                                         BOSS_CUBOID_X)
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, XYZ_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -352,22 +413,31 @@ class EngineBossTestMixin(object):
         y_stop = BOSS_CUBOID_Y - missing_y
         missing_x = 7
         x_stop = BOSS_CUBOID_X - missing_x
-        partial_cuboid = np.random.randint(0, 256, (1, z_stop, y_stop, x_stop), 'uint8')
+        partial_cuboid = np.random.randint(0, 256, (1, z_stop, y_stop, x_stop),
+                                           'uint8')
 
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = partial_cuboid
 
-        expected_cuboid = np.pad(partial_cuboid, ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)), 'constant', constant_values=0)
+        expected_cuboid = np.pad(
+            partial_cuboid, ((0, 0), (0, missing_z), (0, missing_y),
+                             (0, missing_x)),
+            'constant',
+            constant_values=0)
 
-        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y,
+                                         BOSS_CUBOID_X)
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, TZYX_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, TZYX_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -388,22 +458,31 @@ class EngineBossTestMixin(object):
         y_stop = BOSS_CUBOID_Y - missing_y
         missing_x = 7
         x_stop = BOSS_CUBOID_X - missing_x
-        partial_cuboid = np.random.randint(0, 256, (x_stop, y_stop, z_stop, 1), 'uint8')
+        partial_cuboid = np.random.randint(0, 256, (x_stop, y_stop, z_stop, 1),
+                                           'uint8')
 
         chunk = MagicMock(spec=np.ndarray)
         chunk.__getitem__.return_value = partial_cuboid
 
-        expected_cuboid = np.pad(np.transpose(partial_cuboid), ((0, 0), (0, missing_z), (0, missing_y), (0, missing_x)), 'constant', constant_values=0)
+        expected_cuboid = np.pad(
+            np.transpose(partial_cuboid), ((0, 0), (0, missing_z),
+                                           (0, missing_y), (0, missing_x)),
+            'constant',
+            constant_values=0)
 
-        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X)
+        assert expected_cuboid.shape == (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y,
+                                         BOSS_CUBOID_X)
 
         engine = Engine(self.config_file, self.api_token, 23)
-        self.setup_helper.add_volumetric_tasks(
-            self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
+                                               self.aws_creds['secret_key'],
+                                               self.queue_url, engine.backend)
 
         engine.join()
 
-        assert True == engine.upload_cuboid(chunk, 1024, 512, 48, VOLUMETRIC_CUBOID_KEY, VOLUMETRIC_CHUNK_KEY, XYZT_ORDER)
+        assert True == engine.upload_cuboid(chunk, 1024, 512, 48,
+                                            VOLUMETRIC_CUBOID_KEY,
+                                            VOLUMETRIC_CHUNK_KEY, XYZT_ORDER)
 
         s3 = boto3.resource('s3')
         ingest_bucket = s3.Bucket(self.ingest_bucket_name)
@@ -420,19 +499,24 @@ class EngineBossTestMixin(object):
     def s3_object_to_cuboid(self, raw_data, data_type):
         data = blosc.decompress(raw_data)
         data_mat = np.frombuffer(data, dtype=data_type)
-        return np.reshape(data_mat, (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X), order='C')
+        return np.reshape(
+            data_mat, (1, BOSS_CUBOID_Z, BOSS_CUBOID_Y, BOSS_CUBOID_X),
+            order='C')
 
 
 class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        schema_file = os.path.join(resource_filename("ingestclient", "schema"), "boss-v0.2-schema.json")
+        schema_file = os.path.join(
+            resource_filename("ingestclient", "schema"),
+            "boss-v0.2-schema.json")
         with open(schema_file, 'r') as file_handle:
             s = json.load(file_handle)
             cls.mock_schema = {"schema": s}
 
-        cls.config_file = os.path.join(resource_filename("ingestclient", "test/data"), "boss-v0.2-test.json")
+        cls.config_file = os.path.join(
+            resource_filename("ingestclient", "test/data"),
+            "boss-v0.2-test.json")
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
@@ -445,16 +529,18 @@ class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
 
         cls.tile_bucket_name = "test-tile-store"
         cls.ingest_bucket_name = "test-cuboid-store"
-        cls.setup_helper.create_bucket(cls.ingest_bucket_name )
+        cls.setup_helper.create_bucket(cls.ingest_bucket_name)
 
         # mock api token
         cls.api_token = "aalasdklbajklsbfasdklbfkjdsb"
 
         # mock aws creds
-        cls.aws_creds = {"access_key": "asdfasdf", "secret_key": "asdfasdfasdfadsf"}
+        cls.aws_creds = {
+            "access_key": "asdfasdf",
+            "secret_key": "asdfasdfasdfadsf"
+        }
 
     @classmethod
     def tearDownClass(cls):
         # Stop mocking
         cls.setup_helper.stop_mocking()
-
