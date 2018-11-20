@@ -45,14 +45,7 @@ jobs:
         - run:
             name: Running py3 tests ... python unit tests 
             command: |
-              pwd
-              ls -al
-              python -V
               python -m unittest -v  
-
-        - run:
-            name: Running py3 tests ... nose2 (another perspective)
-            command: nose2
 
 
         - store_artifacts:
@@ -100,12 +93,8 @@ jobs:
         - run:
             name: Running py2 tests ... python unit tests 
             command: |
-              pwd
-              ls -al
-              python -V
               python -m unittest discover -v  
               
-
 
         - store_artifacts:
             path: /tmp
