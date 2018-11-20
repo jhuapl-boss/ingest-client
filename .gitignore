@@ -95,3 +95,5 @@ ENV/
 # Vim files
 *.swp
 
+# VSCODE direcotry
+.vscode/
