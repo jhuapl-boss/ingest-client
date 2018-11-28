@@ -66,12 +66,12 @@ jobs:
               - cache-
                 
         - run:
-            name: Installing pip requirements at top level
+            name: Installing pip requirements at root level
             command: |
               sudo pip install -r requirements.txt
                 
         - run:
-            name: IInstalling pip cloudvolume_requirements
+            name: Installing pip cloudvolume_requirements
             command: |
               sudo pip install -r ingestclient/plugins/requirements/cloudvolume_requirements.txt
                 
