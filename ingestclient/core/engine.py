@@ -186,7 +186,7 @@ class Engine(object):
 
 
         """
-        self.job_status, self.credentials, self.upload_job_queue, self.tile_bucket, self.job_params, self.tile_count = self.backend.join(self.ingest_job_id)
+        self.job_status, self.credentials, self.upload_job_queue, self.tile_index_queue, self.tile_bucket, self.job_params, self.tile_count = self.backend.join(self.ingest_job_id)
 
         # Set cred time
         self.credential_create_time = datetime.datetime.now()
@@ -444,6 +444,15 @@ class Engine(object):
                     self.logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(
                         os.getpid(), e))
                     return False
+
+        # Success, so remove message from upload queue.
+        if not self.backend.delete_task(message_id, receipt_handle):
+            return False
+
+        # Put message on the tile index queue.
+        max_put_retries = 3
+        if not self.backend.put_task(msg, max_put_retries):
+            return False
 
         return True
 

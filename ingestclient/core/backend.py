@@ -26,6 +26,7 @@ import os
 
 from ..utils import WaitPrinter
 from ..utils.log import always_log_info
+from ..utils.backoff import get_wait_time
 
 
 @six.add_metaclass(ABCMeta)
@@ -36,6 +37,8 @@ class Backend(object):
         config (dict):
         sqs:
         s3 (boto3.S3)::
+        upload_queue (boto3.SQS.Queue): Queue that holds upload tile messages.
+        tile_index_queue (boto3.SQS.Queue): Queue that triggers a tile index update.
         bucket (S3.Bucket): Tile bucket.
         volumetric_bucket (S3.Bucket): Temporary cuboid holding bucket for volumetric ingests.
     """
@@ -49,7 +52,8 @@ class Backend(object):
         """
         self.config = config
         self.sqs = None
-        self.queue = None
+        self.upload_queue = None
+        self.tile_index_queue = None
         self.s3 = None
         self.bucket = None
         self.volumetric_bucket = None
@@ -94,9 +98,9 @@ class Backend(object):
             ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int, dict, str, str, dict, int): The job status, AWS credentials, and SQS upload_job_queue,
-                                              tile bucket name, config_params to pass along during upload via metadata,
-                                              and tile count
+            (int, dict, str, str, str, dict, int): The job status, AWS credentials, and SQS upload_job_queue,
+                                              tile_index_queue, tile bucket name, config_params to pass along
+                                              during upload via metadata, and tile count
         """
         return NotImplemented
 
@@ -159,13 +163,14 @@ class Backend(object):
         """
         return NotImplemented
 
-    def setup_upload_queue(self, credentials, upload_queue, region="us-east-1"):
+    def setup_queues(self, credentials, upload_queue, tile_index_queue, region="us-east-1"):
         """
         Method to create a connection to the upload task queue
 
         Args:
             credentials(dict): AWS credentials
             upload_queue(str): The URL for the upload SQS queue
+            tile_index_queue(str): URL of tile index queue
             region(str): The AWS region where the SQS queue exists
 
         Returns:
@@ -174,7 +179,8 @@ class Backend(object):
         """
         self.sqs = boto3.resource('sqs', region_name=region, aws_access_key_id=credentials["access_key"],
                                   aws_secret_access_key=credentials["secret_key"])
-        self.queue = self.sqs.Queue(url=upload_queue)
+        self.upload_queue = self.sqs.Queue(url=upload_queue)
+        self.tile_index_queue = self.sqs.Queue(url=tile_index_queue)
 
     def setup_tile_bucket(self, credentials, tile_bucket, region="us-east-1"):
         """
@@ -385,9 +391,9 @@ class BossBackend(Backend):
             ingest_job_id(int): The ID of the job you'd like to resume processing
 
         Returns:
-            (int, dict, str, str, dict, int): The job status, AWS credentials, and SQS upload_job_queue,
-                                              tile bucket name, config_params to pass along during upload via metadata,
-                                              and tile count
+            (int, dict, str, str, str, dict, int): The job status, AWS credentials, and SQS upload_job_queue,
+                                              tile_index_queue, tile bucket name, config_params to pass along
+                                              during upload via metadata, and tile count
         """
         wp = WaitPrinter()
         while True:
@@ -410,11 +416,14 @@ class BossBackend(Backend):
                     if not creds:
                         continue
 
-                    queue = result["ingest_job"]["upload_queue"]
+                    upload_queue = result["ingest_job"]["upload_queue"]
+                    tile_index_queue = result["ingest_job"]["tile_index_queue"]
                     tile_bucket = result["tile_bucket_name"]
                     num_tiles = result["ingest_job"]["tile_count"]
 
                     # Setup params for the rest of the ingest process
+                    # These params are passed as metadata that accompanies the
+                    # S3 object.
                     params = {}
                     params["upload_queue"] = result["ingest_job"]["upload_queue"]
                     params["ingest_queue"] = result["ingest_job"]["ingest_queue"]
@@ -424,12 +433,12 @@ class BossBackend(Backend):
                     params["OBJECTIO_CONFIG"] = result["OBJECTIO_CONFIG"]
                     params["resource"] = result["resource"]
 
-                    self.setup_upload_queue(creds, queue, region="us-east-1")
+                    self.setup_queues(creds, upload_queue, tile_index_queue, region="us-east-1")
                     self.setup_tile_bucket(creds, tile_bucket, region="us-east-1")
                     if "ingest_bucket_name" in result:
                         self.setup_volumetric_bucket(creds, result["ingest_bucket_name"], region="us-east-1")
 
-                    return job_status, creds, queue, tile_bucket, params, num_tiles
+                    return job_status, creds, upload_queue, tile_index_queue, tile_bucket, params, num_tiles
 
     def cancel(self, ingest_job_id):
         """
@@ -510,7 +519,7 @@ class BossBackend(Backend):
         try_cnt = 0
         while try_cnt < 19:
             try:
-                msg = self.queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=1)
+                msg = self.upload_queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=1)
                 break
             except botocore.exceptions.ClientError as e:
                 print("(pid={}) Waiting for credentials to be valid".format(os.getpid()))
@@ -529,8 +538,6 @@ class BossBackend(Backend):
         """
         Delete a message from the upload queue
 
-        This is only used for volumetric ingests.
-
         Args:
             msg_id (str): Id of queue message.
             receipt_handle (str): Actual id required to delete the message.
@@ -545,7 +552,7 @@ class BossBackend(Backend):
         try_cnt = 0
         while try_cnt < MAX_TRIES - 1:
             try:
-                resp = self.queue.delete_messages(Entries=[{'Id': msg_id, 'ReceiptHandle': receipt_handle}])
+                resp = self.upload_queue.delete_messages(Entries=[{'Id': msg_id, 'ReceiptHandle': receipt_handle}])
                 if 'Successful' in resp and len(resp['Successful']) > 0:
                     if resp['Successful'][0]['Id'] == msg_id:
                         return True
@@ -559,7 +566,7 @@ class BossBackend(Backend):
                         # If it's our fault, give up.
                         break
 
-                time.sleep(5)
+                time.sleep(get_wait_time(try_cnt))
             except botocore.exceptions.ClientError:
                 print("(pid={}) Waiting for credentials to be valid".format(os.getpid()))
                 try_cnt += 1
@@ -567,6 +574,29 @@ class BossBackend(Backend):
 
                 if try_cnt >= MAX_TRIES:
                     raise Exception("(pid={}) Credentials failed to be come valid".format(os.getpid()))
+
+        return False
+
+    def put_task(self, msg, max_retries):
+        """
+        Place the message from the upload queue on the tile index queue so the 
+        tile index is updated.
+
+        Args:
+            msg (dict): Message as a dictionary.
+            max_retries (int): Max number retries to put message on queue.
+
+        Returns:
+            (bool): False on failure.
+        """
+        try_cnt = 0
+        while try_cnt < max_retries + 1:
+            try:
+                self.tile_index_queue.send_message(MessageBody=json.dumps(msg))
+                return True
+            except botocore.exceptions.ClientError:
+                try_cnt += 1
+                time.sleep(get_wait_time(try_cnt))
 
         return False
 

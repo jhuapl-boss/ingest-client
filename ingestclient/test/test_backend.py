@@ -42,7 +42,8 @@ class ResponsesMixin(object):
 
         mocked_repsonse = {"ingest_job": {"id": 23,
                                           "ingest_queue": "https://aws.com/myqueue1",
-                                          "upload_queue": self.queue_url,
+                                          "upload_queue": self.upload_queue_url,
+                                          "tile_index_queue": self.tile_index_queue_url,
                                           "status": 1,
                                           "tile_count": 500
                                           },
@@ -75,14 +76,15 @@ class BossBackendTestMixin(object):
 
         assert b.host == "https://api.theboss.io"
 
-    def test_setup_upload_queue(self):
-        """Test connecting the backend to the upload queue"""
+    def test_setup_queues(self):
+        """Test connecting the backend to the upload and tile index queues"""
         b = BossBackend(self.example_config_data)
         b.setup(self.api_token)
 
-        b.setup_upload_queue(self.aws_creds, self.queue_url)
+        b.setup_queues(self.aws_creds, self.upload_queue_url, self.tile_index_queue_url)
 
-        assert b.queue.url == self.queue_url
+        assert b.upload_queue.url == self.upload_queue_url
+        assert b.tile_index_queue.url == self.tile_index_queue_url
 
     def test_create(self):
         """Test creating an ingest job - mock server response"""
@@ -98,12 +100,13 @@ class BossBackendTestMixin(object):
         b = BossBackend(self.example_config_data)
         b.setup(self.api_token)
 
-        status, creds, queue_url, tile_bucket, params, tile_count = b.join(23)
+        status, creds, queue_url, tile_index_queue_url, tile_bucket, params, tile_count = b.join(23)
 
-        assert b.queue.url == self.queue_url
+        assert b.upload_queue.url == self.upload_queue_url
         assert status == 1
         assert creds == self.aws_creds
-        assert queue_url == self.queue_url
+        assert queue_url == self.upload_queue_url
+        assert tile_index_queue_url == self.tile_index_queue_url
         assert tile_bucket == self.tile_bucket_name
         assert tile_count == 500
         assert 'KVIO_SETTINGS' in params
@@ -125,11 +128,11 @@ class BossBackendTestMixin(object):
 
         # Make sure queue is empty.
         sqs = boto3.resource('sqs')
-        queue = sqs.Queue(self.queue_url)
+        queue = sqs.Queue(self.upload_queue_url)
         queue.purge()
 
         # Put some stuff on the task queue
-        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, b)
+        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.upload_queue_url, b)
 
         # Join and get a task
         b.join(23)
@@ -150,11 +153,11 @@ class BossBackendTestMixin(object):
 
         # Make sure queue is empty.
         sqs = boto3.resource('sqs')
-        queue = sqs.Queue(self.queue_url)
+        queue = sqs.Queue(self.upload_queue_url)
         queue.purge()
 
         # Put some stuff on the task queue
-        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, b)
+        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.upload_queue_url, b)
 
         # Join and get a task
         b.join(23)
@@ -306,7 +309,8 @@ class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):
         cls.setup_helper.mock = True
         cls.setup_helper.start_mocking()
 
-        cls.queue_url = cls.setup_helper.create_queue("test-queue")
+        queue_names = ["test-queue", "test-index-queue"]
+        cls.upload_queue_url, cls.tile_index_queue_url = cls.setup_helper.create_queue(queue_names)
 
         cls.tile_bucket_name = "test-tile-store"
         cls.setup_helper.create_bucket("test-tile-store")
