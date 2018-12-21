@@ -583,7 +583,7 @@ class BossBackend(Backend):
         tile index is updated.
 
         Args:
-            msg (dict): Message as a dictionary.
+            msg (str): Message contents.
             max_retries (int): Max number retries to put message on queue.
 
         Returns:
@@ -592,7 +592,7 @@ class BossBackend(Backend):
         try_cnt = 0
         while try_cnt < max_retries + 1:
             try:
-                self.tile_index_queue.send_message(MessageBody=json.dumps(msg))
+                self.tile_index_queue.send_message(MessageBody=msg)
                 return True
             except botocore.exceptions.ClientError:
                 try_cnt += 1

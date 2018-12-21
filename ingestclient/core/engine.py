@@ -405,6 +405,7 @@ class Engine(object):
 
         try:
             metadata = {'chunk_key': msg['chunk_key'],
+                        'tile_key': msg['tile_key'],
                         'ingest_job': self.ingest_job_id,
                         'parameters': self.job_params,
                         'x_size': self.config.config_data['ingest_job']["tile_size"]["x"],
@@ -449,9 +450,9 @@ class Engine(object):
         if not self.backend.delete_task(message_id, receipt_handle):
             return False
 
-        # Put message on the tile index queue.
+        # Put tile on the tile index queue.
         max_put_retries = 3
-        if not self.backend.put_task(msg, max_put_retries):
+        if not self.backend.put_task(json.dumps(metadata, separators=(',', ':')), max_put_retries):
             return False
 
         return True
