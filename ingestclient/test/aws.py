@@ -105,13 +105,30 @@ class Setup(object):
         return url
 
     def create_queue(self, queue_name):
-        """Method to create a test sqs"""
+        """
+        Create one or more SQS queues.  When mocking, all queues must be created
+        at once.  If not, only the last one created exists.
+
+        Args:
+            queue_name (str|list[str]): Name of queue(s) to create.
+
+        Returns:
+            (str|list[str]): URL(s) of queue(s).
+        """
+        url = []
+        if not isinstance(queue_name, list):
+            queue_name = [queue_name]
+
         if self.mock:
             with mock_sqs():
-                url = self._create_queue(queue_name)
+                url = [self._create_queue(name) for name in queue_name]
         else:
-            url = self._create_queue(queue_name)
+            url = [self._create_queue(name) for name in queue_name]
             time.sleep(30)
+
+        if len(url) == 1:
+            return url[0]
+
         return url
 
     def _delete_queue(self, queue_url):

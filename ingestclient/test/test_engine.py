@@ -39,13 +39,14 @@ class ResponsesMixin(object):
         responses._default_mock.__exit__(None, None, None)
 
     def add_default_response(self):
-        mocked_repsonse = {"id": 23}
+        mocked_response = {"id": 23}
         responses.add(responses.POST, 'https://api.theboss.io/latest/ingest/',
-                      json=mocked_repsonse, status=201)
+                      json=mocked_response, status=201)
 
-        mocked_repsonse = {"ingest_job": {"id": 23,
+        mocked_response = {"ingest_job": {"id": 23,
                                           "ingest_queue": "https://aws.com/myqueue1",
-                                          "upload_queue": self.queue_url,
+                                          "upload_queue": self.upload_queue_url,
+                                          "tile_index_queue": self.tile_index_queue_url,
                                           "status": 1,
                                           "tile_count": 500,
                                           },
@@ -58,7 +59,7 @@ class ResponsesMixin(object):
                            "resource": {"resource": "stuff"}
                            }
         responses.add(responses.GET, 'https://api.theboss.io/latest/ingest/23',
-                      json=mocked_repsonse, status=200)
+                      json=mocked_response, status=200)
 
         responses.add(responses.DELETE, 'https://api.theboss.io/latest/ingest/23', status=204)
 
@@ -114,7 +115,8 @@ class EngineBossTestMixin(object):
 
         engine.join()
 
-        assert engine.upload_job_queue == self.queue_url
+        assert engine.upload_job_queue == self.upload_queue_url
+        assert engine.tile_index_queue == self.tile_index_queue_url
         assert engine.job_status == 1
 
     def test_run(self):
@@ -122,8 +124,15 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         engine.msg_wait_iterations = 2
 
+        NUM_EXPECTED_TASKS = 4
+
         # Put some stuff on the task queue
-        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.queue_url, engine.backend)
+        self.setup_helper.add_tasks(self.aws_creds["access_key"], self.aws_creds['secret_key'], self.upload_queue_url, engine.backend)
+        sqs = boto3.resource('sqs')
+        upload_queue = sqs.Queue(self.upload_queue_url)
+
+        # Make sure add_tasks() is putting the number of msgs we expect.
+        self.assertEqual(NUM_EXPECTED_TASKS , int(upload_queue.attributes['ApproximateNumberOfMessages']))
 
         engine.join()
         engine.run()
@@ -138,6 +147,16 @@ class EngineBossTestMixin(object):
 
                 # Make sure the key was valid an data was loaded into the file handles
                 assert data.tell() == 182300
+
+        # Make sure all msgs removed from upload queue
+        upload_queue.reload()
+        self.assertEqual(0, int(upload_queue.attributes['ApproximateNumberOfMessages']))
+        self.assertEqual(0, int(upload_queue.attributes['ApproximateNumberOfMessagesNotVisible']))
+
+        # Make sure all msgs were placed on tile index queue
+        tile_index_queue = sqs.Queue(self.tile_index_queue_url)
+        self.assertEqual(NUM_EXPECTED_TASKS, int(tile_index_queue.attributes['ApproximateNumberOfMessages']))
+
 
 
 class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
@@ -158,7 +177,8 @@ class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
         cls.setup_helper.mock = True
         cls.setup_helper.start_mocking()
 
-        cls.queue_url = cls.setup_helper.create_queue("test-queue")
+        queue_names = ["test-queue", "test-index-queue"]
+        cls.upload_queue_url, cls.tile_index_queue_url = cls.setup_helper.create_queue(queue_names)
 
         cls.tile_bucket_name = "test-tile-store"
         cls.setup_helper.create_bucket("test-tile-store")

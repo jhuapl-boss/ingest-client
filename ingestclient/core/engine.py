@@ -186,7 +186,7 @@ class Engine(object):
 
 
         """
-        self.job_status, self.credentials, self.upload_job_queue, self.tile_bucket, self.job_params, self.tile_count = self.backend.join(self.ingest_job_id)
+        self.job_status, self.credentials, self.upload_job_queue, self.tile_index_queue, self.tile_bucket, self.job_params, self.tile_count = self.backend.join(self.ingest_job_id)
 
         # Set cred time
         self.credential_create_time = datetime.datetime.now()
@@ -405,6 +405,7 @@ class Engine(object):
 
         try:
             metadata = {'chunk_key': msg['chunk_key'],
+                        'tile_key': msg['tile_key'],
                         'ingest_job': self.ingest_job_id,
                         'parameters': self.job_params,
                         'x_size': self.config.config_data['ingest_job']["tile_size"]["x"],
@@ -444,6 +445,15 @@ class Engine(object):
                     self.logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(
                         os.getpid(), e))
                     return False
+
+        # Success, so remove message from upload queue.
+        if not self.backend.delete_task(message_id, receipt_handle):
+            return False
+
+        # Put tile on the tile index queue.
+        max_put_retries = 3
+        if not self.backend.put_task(json.dumps(metadata, separators=(',', ':')), max_put_retries):
+            return False
 
         return True
 

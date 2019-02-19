@@ -66,7 +66,8 @@ class ResponsesMixin(object):
             "ingest_job": {
                 "id": 23,
                 "ingest_queue": "https://aws.com/myqueue1",
-                "upload_queue": self.queue_url,
+                "upload_queue": self.upload_queue_url,
+                "tile_index_queue": self.tile_index_queue_url,
                 "status": 1,
                 "tile_count": 500,
             },
@@ -148,7 +149,7 @@ class EngineBossTestMixin(object):
 
         engine.join()
 
-        assert engine.upload_job_queue == self.queue_url
+        assert engine.upload_job_queue == self.upload_queue_url
         assert engine.job_status == 1
 
     def test_run(self):
@@ -159,7 +160,7 @@ class EngineBossTestMixin(object):
         # Put some stuff on the task queue
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
         engine.run()
@@ -188,7 +189,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -214,7 +215,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -242,7 +243,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -270,7 +271,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -299,7 +300,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -343,7 +344,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -388,7 +389,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -433,7 +434,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -478,7 +479,7 @@ class EngineBossTestMixin(object):
         engine = Engine(self.config_file, self.api_token, 23)
         self.setup_helper.add_volumetric_tasks(self.aws_creds["access_key"],
                                                self.aws_creds['secret_key'],
-                                               self.queue_url, engine.backend)
+                                               self.upload_queue_url, engine.backend)
 
         engine.join()
 
@@ -527,7 +528,8 @@ class TestBossEngine(EngineBossTestMixin, ResponsesMixin, unittest.TestCase):
         cls.setup_helper.mock = True
         cls.setup_helper.start_mocking()
 
-        cls.queue_url = cls.setup_helper.create_queue("test-queue")
+        queue_names = ["test-queue", "test-index-queue"]
+        cls.upload_queue_url, cls.tile_index_queue_url = cls.setup_helper.create_queue(queue_names)
 
         cls.tile_bucket_name = "test-tile-store"
         cls.ingest_bucket_name = "test-cuboid-store"
