@@ -180,7 +180,8 @@ class Backend(object):
         self.sqs = boto3.resource('sqs', region_name=region, aws_access_key_id=credentials["access_key"],
                                   aws_secret_access_key=credentials["secret_key"])
         self.upload_queue = self.sqs.Queue(url=upload_queue)
-        self.tile_index_queue = self.sqs.Queue(url=tile_index_queue)
+        if tile_index_queue:
+            self.tile_index_queue = self.sqs.Queue(url=tile_index_queue)
 
     def setup_tile_bucket(self, credentials, tile_bucket, region="us-east-1"):
         """
