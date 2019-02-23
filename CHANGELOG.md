@@ -1,5 +1,11 @@
 # Boss Ingest Client Changelog
 
+## 0.9.13
+
+### Fixed Bug:
+
+*  Stop client from creating tile index queue when doing volumetric ingest as that is handled by endpoint.
+
 ## 0.9.12
 
 ### Implemented Enhancements:
