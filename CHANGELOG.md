@@ -1,5 +1,11 @@
 # Boss Ingest Client Changelog
 
+## 0.9.14
+
+### Implemented Enhancements:
+
+* Added exponential backoff on retries when a client is trying to join an ingest job.
+
 ## 0.9.13
 
 ### Fixed Bug:
