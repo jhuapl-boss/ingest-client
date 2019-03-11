@@ -23,6 +23,7 @@ import time
 import botocore
 from pkg_resources import resource_filename
 import os
+import random
 
 from ..utils import WaitPrinter
 from ..utils.log import always_log_info
@@ -396,12 +397,29 @@ class BossBackend(Backend):
                                               tile_index_queue, tile bucket name, config_params to pass along
                                               during upload via metadata, and tile count
         """
+
+        # pausing a random amount of seconds before joining the ingest job.
+        # This will allow large ingest jobs to scale up less aburptly
+        delay_start_by = random.randint(0,120)
+        print("pausing before joining the ingest-job: {} seconds.".format(delay_start_by))
+        time.sleep(delay_start_by)
+
         wp = WaitPrinter()
+        maximum_retries = 50
+        retries = 0
         while True:
             r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
                              headers=self.api_headers, verify=self.validate_ssl)
+            if r.status_code in [500, 502]:
+                retries += 1
+                if retries > maximum_retries:
+                    raise Exception("After {} attempts, failed to join ingest job: {}".format(maximum_retries, r.text))
 
-            if r.status_code != 200:
+                exp_backoff = 25 * 2 ** retries
+                pause_for = random.uniform(1, min(30000, exp_backoff)) / 1000  # in ms
+                print("Join request failed with: {} pausing for {} before retrying.".format(r.status_code, pause_for))
+                time.sleep(pause_for)
+            elif r.status_code != 200:
                 raise Exception("Failed to join ingest job: {}".format(r.text))
             else:
                 result = r.json()
