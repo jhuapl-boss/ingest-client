@@ -1,5 +1,16 @@
 # Boss Ingest Client Changelog
 
+## 0.9.15
+
+### Fixed Bug:
+
+*  Removed delayed wait at the beginning joining a job. 
+
+### Implemented Enhancements:
+
+* Added exponential backoff on retries when a client is requesting job status of an ingest job.
+
+
 ## 0.9.14
 
 ### Implemented Enhancements:

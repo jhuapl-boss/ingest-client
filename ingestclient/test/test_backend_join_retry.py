@@ -43,6 +43,8 @@ class ResponsesMixin(object):
         mocked_repsonse = {"text": ERROR_TEXT}
         responses.add(responses.GET, 'https://api.theboss.io/latest/ingest/23',
                       json=mocked_repsonse, status=500)
+        responses.add(responses.GET, 'https://api.theboss.io/latest/ingest/23/status',
+                      json=mocked_repsonse, status=500)
 
 
 
@@ -59,7 +61,18 @@ class BossBackendTestMixin(object):
         with self.assertRaises(Exception) as context:
             status, creds, queue_url, tile_index_queue_url, tile_bucket, params, tile_count = b.join(23)
 
-            self.assertTrue('After {} attempts, failed to join ingest job: {}'.format(50, ERROR_TEXT))
+            self.assertTrue('After {} attempts, failed to join ingest job: {}'.format(50, ERROR_TEXT) in context.exception)
+
+
+    @mock.patch('time.sleep')
+    def test_get_status_retry(self, fake_sleep):
+        """Test creating an ingest job - mock server response"""
+        b = BossBackend(self.example_config_data)
+        b.setup(self.api_token)
+
+        with self.assertRaises(Exception) as context:
+            b.get_job_status(23)
+
 
 
 class TestBossBackend(BossBackendTestMixin, ResponsesMixin, unittest.TestCase):

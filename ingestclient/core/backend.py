@@ -398,14 +398,8 @@ class BossBackend(Backend):
                                               during upload via metadata, and tile count
         """
 
-        # pausing a random amount of seconds before joining the ingest job.
-        # This will allow large ingest jobs to scale up less aburptly
-        delay_start_by = random.randint(0,120)
-        print("pausing before joining the ingest-job: {} seconds.".format(delay_start_by))
-        time.sleep(delay_start_by)
-
         wp = WaitPrinter()
-        maximum_retries = 50
+        maximum_retries = 100
         retries = 0
         while True:
             r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
@@ -415,9 +409,9 @@ class BossBackend(Backend):
                 if retries > maximum_retries:
                     raise Exception("After {} attempts, failed to join ingest job: {}".format(maximum_retries, r.text))
 
-                exp_backoff = 25 * 2 ** retries
-                pause_for = random.uniform(1, min(30000, exp_backoff)) / 1000  # in ms
-                print("Join request failed with: {} pausing for {} before retrying.".format(r.status_code, pause_for))
+                exp_backoff = 100 * 2 ** retries  # in ms
+                pause_for = random.uniform(1, min(30000, exp_backoff)) / 1000
+                print("Join request failed with: {} pausing for {:0.3f} seconds before retrying.".format(r.status_code, pause_for))
                 time.sleep(pause_for)
             elif r.status_code != 200:
                 raise Exception("Failed to join ingest job: {}".format(r.text))
@@ -629,13 +623,27 @@ class BossBackend(Backend):
         Returns:
             (int)
         """
-        r = requests.get('{}/{}/ingest/{}/status'.format(self.host, self.api_version, ingest_job_id),
-                         headers=self.api_headers, verify=self.validate_ssl)
 
-        if r.status_code != 200:
-            raise Exception("Failed to get ingest job status: {}".format(r.text))
-        else:
-            return r.json()
+        maximum_retries = 100
+        retries = 0
+        while True:
+            r = requests.get('{}/{}/ingest/{}/status'.format(self.host, self.api_version, ingest_job_id),
+                             headers=self.api_headers, verify=self.validate_ssl)
+            if r.status_code in [500, 502]:
+                retries += 1
+                if retries > maximum_retries:
+                    raise Exception("After {} attempts, failed to join ingest job: {}".format(maximum_retries, r.text))
+
+                exp_backoff = 100 * 2 ** retries  # in ms
+                pause_for = random.uniform(1, min(30000, exp_backoff)) / 1000
+                print("Job status request failed with: {} pausing for {:0.3f} seconds before retrying.".format(r.status_code,
+                                                                                                         pause_for))
+                time.sleep(pause_for)
+
+            elif r.status_code != 200:
+                raise Exception("Failed to get ingest job status: {}".format(r.text))
+            else:
+                return r.json()
 
     def encode_tile_key(self, project_info, resolution, x_index, y_index, z_index, t_index=0):
         """A method to create a tile key.
