@@ -4,7 +4,7 @@
 
 ### Fixed Bug:
 
-*  Removed delayed wait at the beginning joining a job. 
+*  Removed delayed wait when requesting job credentials. 
 
 ### Implemented Enhancements:
 
