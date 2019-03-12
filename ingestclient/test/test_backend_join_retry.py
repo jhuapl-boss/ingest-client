@@ -61,8 +61,6 @@ class BossBackendTestMixin(object):
         with self.assertRaises(Exception) as context:
             status, creds, queue_url, tile_index_queue_url, tile_bucket, params, tile_count = b.join(23)
 
-            self.assertTrue('After {} attempts, failed to join ingest job: {}'.format(50, ERROR_TEXT) in context.exception)
-
 
     @mock.patch('time.sleep')
     def test_get_status_retry(self, fake_sleep):
