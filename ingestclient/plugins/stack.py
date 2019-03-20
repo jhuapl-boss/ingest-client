@@ -151,7 +151,7 @@ class ZindexStackTileProcessor(TileProcessor):
         # Save sub-img to png and return handle
         tile_data = Image.open(file_handle)
         tile_arr = np.array(tile_data)
-        if tile_arr.dtype != np.uint8 or tile_arr.dtype != np.uint64:
+        if tile_arr.dtype != np.uint8 and tile_arr.dtype != np.uint64:
             tile_arr = np.uint8(tile_arr/256)
             tile_data = Image.fromarray(tile_arr)
         upload_img = tile_data.crop((x_range[0], y_range[0], x_range[1], y_range[1]))
