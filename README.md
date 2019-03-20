@@ -10,6 +10,18 @@ A Python command line application for performing distributed ingest of data into
 ## Overview
 The ingest client application lets users move data from local storage into the Boss, quickly and reliably. It supports both Python 2 and 3. It uses a JSON configuration file to define ingest jobs, and a plugin system to support any local file organization.
 
+Two types of ingest are supported:
+- Tile based
+- Volumetric
+
+### Tile Based Ingests
+
+This ingest type uploads data in 2D image tiles.  It supports many different formats, but it is not as efficient as volumetric ingests.
+
+### Volumetric Ingests
+
+This type of ingest uploads data in the Boss' native storage format.  3D cuboids, that are 512, 512, 16, in x, y, z, respectively, are uploaded by the ingest client.
+
 ## Installation
 
 - Use virtualenv to isolate the ingest client from your system Python installation

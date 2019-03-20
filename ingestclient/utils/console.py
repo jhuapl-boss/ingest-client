@@ -23,14 +23,22 @@ def print_estimated_job(config_file=None, configuration=None):
     else:
         raise Exception('Must provide either a configuration object or an absolute path to a config file')
 
-    # Compute number of tiles
+    # Compute number of tiles or chunks
     num_x_tiles = config["ingest_job"]["extent"]["x"][1] - config["ingest_job"]["extent"]["x"][0]
     num_y_tiles = config["ingest_job"]["extent"]["y"][1] - config["ingest_job"]["extent"]["y"][0]
     num_z_tiles = config["ingest_job"]["extent"]["z"][1] - config["ingest_job"]["extent"]["z"][0]
     num_t_tiles = config["ingest_job"]["extent"]["t"][1] - config["ingest_job"]["extent"]["t"][0]
 
-    num_tiles = (num_x_tiles * num_y_tiles) / (config["ingest_job"]["tile_size"]["x"] * config["ingest_job"]["tile_size"]["y"])
-    num_tiles = num_tiles * num_z_tiles * num_t_tiles
+    if "ingest_type" not in config["ingest_job"] or config["ingest_job"]["ingest_type"] == "tile":
+        num_tiles = (num_x_tiles * num_y_tiles) / (config["ingest_job"]["tile_size"]["x"] * config["ingest_job"]["tile_size"]["y"])
+        num_tiles = num_tiles * num_z_tiles * num_t_tiles
+    elif config["ingest_job"]["ingest_type"] == "volumetric":
+        num_tiles = ((num_x_tiles * num_y_tiles * num_z_tiles * num_t_tiles) /
+            (config["ingest_job"]["chunk_size"]["x"] *
+             config["ingest_job"]["chunk_size"]["y"] *
+             config["ingest_job"]["chunk_size"]["z"]))
+    else:
+        raise ValueError("Unknown ingest_type: {}".format(config["ingest_job"]["ingest_type"]))
 
     # Build Message
     pp = pprint.PrettyPrinter(indent=2)
@@ -42,10 +50,16 @@ def print_estimated_job(config_file=None, configuration=None):
     msg += "Path Processor Configuration:\n"
     msg += "  Plugin: {}\n".format(config["client"]["path_processor"]["class"])
     msg += "  Parameters: {}\n".format(pp.pformat(config["client"]["path_processor"]["params"]).replace("\n", "\n              "))
-    msg += "\nTile Processor Configuration:\n"
-    msg += "  Plugin: {}\n".format(config["client"]["tile_processor"]["class"])
-    msg += "  Parameters: {}\n".format(pp.pformat(config["client"]["tile_processor"]["params"]).replace("\n", "\n              "))
-    msg += "\nTotal Number of Image Tiles to Upload: {}".format(int(num_tiles))
+    if "ingest_type" not in config["ingest_job"] or config["ingest_job"]["ingest_type"] == "tile":
+        msg += "\nTile Processor Configuration:\n"
+        msg += "  Plugin: {}\n".format(config["client"]["tile_processor"]["class"])
+        msg += "  Parameters: {}\n".format(pp.pformat(config["client"]["tile_processor"]["params"]).replace("\n", "\n              "))
+        msg += "\nTotal Number of Image Tiles to Upload: {}".format(int(num_tiles))
+    elif config["ingest_job"]["ingest_type"] == "volumetric":
+        msg += "\nChunk Processor Configuration:\n"
+        msg += "  Plugin: {}\n".format(config["client"]["chunk_processor"]["class"])
+        msg += "  Parameters: {}\n".format(pp.pformat(config["client"]["chunk_processor"]["params"]).replace("\n", "\n              "))
+        msg += "\nTotal Number of Image Chunks to Upload: {}".format(int(num_tiles))
 
     # Print/Log
     always_log_info(msg)

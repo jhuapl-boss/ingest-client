@@ -1,5 +1,35 @@
 # Boss Ingest Client Changelog
 
+## 0.9.15
+
+### Fixed Bug:
+
+*  Removed delayed wait when requesting job credentials. 
+
+### Implemented Enhancements:
+
+* Added exponential backoff on retries when a client is requesting job status of an ingest job.
+
+
+## 0.9.14
+
+### Implemented Enhancements:
+
+* Added exponential backoff on retries when a client is trying to join an ingest job.
+
+## 0.9.13
+
+### Fixed Bug:
+
+*  Stop client from creating tile index queue when doing volumetric ingest as that is handled by endpoint.
+
+## 0.9.12
+
+### Implemented Enhancements:
+
+* Added ability to volumetric ingest jobs using Princeton's CloudVolume data format.
+
+
 ## 0.9.11
 
 ### Fixed Bug:

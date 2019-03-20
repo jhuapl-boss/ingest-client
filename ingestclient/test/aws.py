@@ -19,6 +19,10 @@ from moto import mock_sqs
 
 import time
 
+VOLUMETRIC_CUBOID_KEY = "md5hash&1&2&3&0&22"
+# Currently just passed to Engine.upload_cuboid() to be stored in metadata.
+VOLUMETRIC_CHUNK_KEY = "foo"
+
 
 class Setup(object):
     """ Class to handle setting up AWS resources for testing
@@ -101,13 +105,30 @@ class Setup(object):
         return url
 
     def create_queue(self, queue_name):
-        """Method to create a test sqs"""
+        """
+        Create one or more SQS queues.  When mocking, all queues must be created
+        at once.  If not, only the last one created exists.
+
+        Args:
+            queue_name (str|list[str]): Name of queue(s) to create.
+
+        Returns:
+            (str|list[str]): URL(s) of queue(s).
+        """
+        url = []
+        if not isinstance(queue_name, list):
+            queue_name = [queue_name]
+
         if self.mock:
             with mock_sqs():
-                url = self._create_queue(queue_name)
+                url = [self._create_queue(name) for name in queue_name]
         else:
-            url = self._create_queue(queue_name)
+            url = [self._create_queue(name) for name in queue_name]
             time.sleep(30)
+
+        if len(url) == 1:
+            return url[0]
+
         return url
 
     def _delete_queue(self, queue_url):
@@ -170,3 +191,43 @@ class Setup(object):
             mock_sqs(self._add_tasks(id, secret, queue_url, backend_instance))
         else:
             self._add_tasks(id, secret, queue_url, backend_instance)
+
+    def _add_volumetric_tasks(self, id, secret, queue_url, backend_instance):
+        """Push some fake tasks on the volumetric upload queue"""
+        client = boto3.client('sqs', region_name=self.region, aws_access_key_id=id,
+                              aws_secret_access_key=secret)
+
+        params = {
+            "cuboids": [
+                { "x": 0, "y": 0, "z": 0, "key": VOLUMETRIC_CUBOID_KEY }
+            ],
+            "collection": 1,
+            "experiment": 2,
+            "channel": 3,
+            "resolution": 0,
+            "x_index": 0,
+            "y_index": 0,
+            "z_index": 0,
+            "t_index": 0,
+            "num_tiles": 1
+        }
+
+        proj = [str(params['collection']), str(params['experiment']), str(params['channel'])]
+        chunk_key = backend_instance.encode_chunk_key(params['num_tiles'], proj,
+                                                      params['resolution'],
+                                                      params['x_index'],
+                                                      params['y_index'],
+                                                      params['z_index'],
+                                                      params['t_index'],
+                                                      )
+        self.test_msg = []
+        msg = { "chunk_key": chunk_key, "cuboids": params["cuboids"] }
+        client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(msg))
+        self.test_msg.append(msg)
+
+    def add_volumetric_tasks(self, id, secret, queue_url, backend_instance):
+        """Add fake tasks to the volumetric upload queue"""
+        if self.mock:
+            mock_sqs(self._add_volumetric_tasks(id, secret, queue_url, backend_instance))
+        else:
+            self._add_volumetric_tasks(id, secret, queue_url, backend_instance)

@@ -1,0 +1,48 @@
+{
+  "schema": {
+      "name": "boss-v0.2-schema",
+      "validator": "BossValidatorV02"
+  },
+  "client": {
+    "backend": {
+      "name": "boss",
+      "class": "BossBackend",
+      "host": "api.theboss.io",
+      "protocol": "https"
+    },
+    "path_processor": {
+      "class": "ingestclient.plugins.cloudvolume.CloudVolumePathProcessor",
+      "params": {
+      }
+    },
+    "chunk_processor": {
+      "class": "ingestclient.plugins.cloudvolume.CloudVolumeChunkProcessor",
+      "params": {
+        "cloudpath": "gs://neuroglancer/foo/bar"
+      }
+    }
+  },
+  "database": {
+    "collection": "my_col_1",
+    "experiment": "my_exp_1",
+    "channel": "my_ch_1"
+  },
+  "ingest_job": {
+    "ingest_type": "volumetric",
+    "resolution": 0,
+    "extent": {
+      "x": [0, 8192],
+      "y": [0, 8192],
+      "z": [0, 500],
+      "t": [0, 1]
+    },
+    "chunk_size": {
+      "x": 1024,
+      "y": 1024,
+      "z": 64
+    }
+  }
+}
+
+
+
