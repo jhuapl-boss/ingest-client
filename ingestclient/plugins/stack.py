@@ -14,6 +14,7 @@
 from __future__ import absolute_import
 import six
 from PIL import Image
+import numpy as np
 import re
 import os
 
@@ -147,8 +148,16 @@ class ZindexStackTileProcessor(TileProcessor):
         y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
                    self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
 
+        # Allowed data types:
+        allowed_types = [np.uint8, np.uint16, np.uint64]
+
         # Save sub-img to png and return handle
         tile_data = Image.open(file_handle)
+        tile_arr = np.array(tile_data)
+        if tile_arr.dtype not in allowed_types:
+            print("Your data type is not uint8, uint16 or uint64, converting to uint8 and attempting upload.")
+            tile_arr = np.uint8(tile_arr/256)
+            tile_data = Image.fromarray(tile_arr)
         upload_img = tile_data.crop((x_range[0], y_range[0], x_range[1], y_range[1]))
         output = six.BytesIO()
         upload_img.save(output, format=canonical_extension(self.parameters["extension"]))
