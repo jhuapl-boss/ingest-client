@@ -16,6 +16,7 @@ import six
 from PIL import Image
 from intern.remote.boss import BossRemote
 from intern.resource.boss.resource import ChannelResource
+from intern.service.boss.v1.volume import CacheMode
 import numpy as np
 import time
 
@@ -126,7 +127,7 @@ class InternTileProcessor(TileProcessor):
             while cnt < 5:
                 try:
                     data = self.remote.get_cutout(self.channel, self.parameters["resolution"],
-                                                  x_rng, y_rng, z_rng, no_cache=True)
+                                                  x_rng, y_rng, z_rng, access_mode=CacheMode.no_cache)
                     data = np.asarray(data, np.uint32)
                     break
                 except Exception as err:
