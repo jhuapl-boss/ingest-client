@@ -446,15 +446,16 @@ class Engine(object):
                         os.getpid(), e))
                     return False
 
-        # Success, so remove message from upload queue.
-        if not self.backend.delete_task(message_id, receipt_handle):
-            return False
 
         # Put tile on the tile index queue.
         max_put_retries = 3
         if not self.backend.put_task(json.dumps(metadata, separators=(',', ':')), max_put_retries):
             return False
 
+        # Success, so remove message from upload queue.
+        if not self.backend.delete_task(message_id, receipt_handle):
+            return False
+        
         return True
 
     def upload_chunk(self, msg, message_id, receipt_handle):
