@@ -17,11 +17,13 @@ from PIL import Image
 import numpy as np
 import re
 import os
+import numpy as np
 
 from ..utils.filesystem import DynamicFilesystem
 from .path import PathProcessor
 from .tile import TileProcessor
 
+Image.MAX_IMAGE_PIXELS = 270000000  # Need for larger images
 
 class ZindexStackPathProcessor(PathProcessor):
     """Class for simple image stacks that only increment in Z, uses the dynamic filesystem utility"""
@@ -75,7 +77,7 @@ class ZindexStackPathProcessor(PathProcessor):
 
         if z_index >= self.parameters["ingest_job"]["extent"]["z"][1]:
             raise IndexError("Z-index out of range")
-
+            
         # Create base filename
         matches = self.regex.findall(self.parameters['base_filename'])
 
@@ -142,23 +144,29 @@ class ZindexStackTileProcessor(TileProcessor):
         """
         # Load tile
         file_handle = self.fs.get_file(file_path)
-
         x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
                    self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
         y_range = [self.parameters["ingest_job"]["tile_size"]["y"] * y_index,
                    self.parameters["ingest_job"]["tile_size"]["y"] * (y_index + 1)]
 
-        # Allowed data types:
-        allowed_types = [np.uint8, np.uint16, np.uint64]
+        tile_crop_index_left = x_range[0] - self.parameters["ingest_job"]["extent"]["x"][0] 
+        tile_crop_index_right =  tile_crop_index_left + self.parameters["ingest_job"]["tile_size"]["x"]
+        tile_crop_index_upper = y_range[0] - self.parameters["ingest_job"]["extent"]["y"][0]
+        tile_crop_index_lower = tile_crop_index_upper + self.parameters["ingest_job"]["tile_size"]["y"]
 
         # Save sub-img to png and return handle
-        tile_data = Image.open(file_handle)
-        tile_arr = np.array(tile_data)
-        if tile_arr.dtype not in allowed_types:
-            print("Your data type is not uint8, uint16 or uint64, converting to uint8 and attempting upload.")
-            tile_arr = np.uint8(tile_arr/256)
-            tile_data = Image.fromarray(tile_arr)
-        upload_img = tile_data.crop((x_range[0], y_range[0], x_range[1], y_range[1]))
+        try:
+            tile_data = Image.open(file_handle)
+            tile_arr = np.array(tile_data)
+            if tile_arr.dtype not in allowed_types:
+                print("Your data type is not uint8, uint16 or uint64, converting to uint8 and attempting upload.")
+                tile_arr = np.uint8(tile_arr/256)
+                tile_data = Image.fromarray(tile_arr)
+            upload_img = tile_data.crop((tile_crop_index_left, tile_crop_index_upper, tile_crop_index_right, tile_crop_index_lower))
+        except OSError:
+            print("Failed on {}..replacing with black".format(file_path))
+            tile_data = np.zeros((self.parameters["ingest_job"]["tile_size"]["x"], self.parameters["ingest_job"]["tile_size"]["y"]))
+            upload_img = Image.fromarray(tile_data, mode='RGB')
         output = six.BytesIO()
         upload_img.save(output, format=canonical_extension(self.parameters["extension"]))
 

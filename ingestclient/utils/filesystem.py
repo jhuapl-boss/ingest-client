@@ -131,7 +131,10 @@ class S3Filesystem(BaseFilesystem):
         BaseFilesystem.__init__(self, parameters)
 
         self.s3 = boto3.resource('s3')
+        self.s3client = boto3.client('s3')
+        self.bucketname = parameters['bucket']
         self.bucket = self.s3.Bucket(parameters['bucket'])
+        self.paginator = self.s3client.get_paginator('list_objects_v2')
 
     def get_file(self, path):
         """Method to get a file from the "file system"
@@ -143,7 +146,29 @@ class S3Filesystem(BaseFilesystem):
             (io.BufferedReader): A file handle for the specified file
         """
         output = six.BytesIO()
-        self.bucket.download_fileobj(path, output)
+
+        # Allows for wildcards (Involves data crawl, computationally expensive)
+        if '*' in path:
+            segments = path.split('*')
+            prefix = segments[0]
+            suffix = segments[1]
+            ## List objects only goes up to about 1000 objects, paginator acts as bypass
+            pageresponse = self.paginator.paginate(Bucket=self.bucketname, Prefix=prefix)
+            for pageobject in pageresponse:
+                try: 
+                    for key in pageobject['Contents']:
+                        path_name = key['Key']
+                        if str(suffix) in path_name:
+                            path = path_name
+                        elif '*' in path_name:
+                            raise Exception('Wild card was not removed successfully')
+                        else:
+                            continue #Continue the for loop if suffix is not matched, this just means it should be ignored.
+                    self.s3client.download_fileobj(self.bucketname, path, output)
+                except KeyError:
+                    # If the file doesn't exit then replace with a black tile
+                    continue
+
         return output
 
 
