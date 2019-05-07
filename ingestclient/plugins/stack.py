@@ -154,6 +154,9 @@ class ZindexStackTileProcessor(TileProcessor):
         tile_crop_index_upper = y_range[0] - self.parameters["ingest_job"]["extent"]["y"][0]
         tile_crop_index_lower = tile_crop_index_upper + self.parameters["ingest_job"]["tile_size"]["y"]
 
+        # Allowed data types:
+        allowed_types = [np.uint8, np.uint16, np.uint64]
+
         # Save sub-img to png and return handle
         try:
             tile_data = Image.open(file_handle)
@@ -163,7 +166,8 @@ class ZindexStackTileProcessor(TileProcessor):
                 tile_arr = np.uint8(tile_arr/256)
                 tile_data = Image.fromarray(tile_arr)
             upload_img = tile_data.crop((tile_crop_index_left, tile_crop_index_upper, tile_crop_index_right, tile_crop_index_lower))
-        except OSError:
+        except OSError as e:
+            print(e)
             print("Failed on {}..replacing with black".format(file_path))
             tile_data = np.zeros((self.parameters["ingest_job"]["tile_size"]["x"], self.parameters["ingest_job"]["tile_size"]["y"]))
             upload_img = Image.fromarray(tile_data, mode='RGB')
