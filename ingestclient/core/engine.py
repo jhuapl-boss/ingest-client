@@ -445,6 +445,15 @@ class Engine(object):
                     self.logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(
                         os.getpid(), e))
                     return False
+            elif str(e).startswith("An error occurred (MetadataTooLarge) when calling the PutObject operation"):
+                self.logger.error("(pid={}): unrecoverable error: {} ".format(os.getpid(), e))
+                return False
+
+            self.logger.error("(pid={}): may be possible to recover: {} ".format(os.getpid(), e))
+
+            # Exit method now because upload to tile bucket failed.  Returning
+            # True because we haven't hit an unrecoverable error, yet.
+            return True
 
 
         # Put tile on the tile index queue.
@@ -592,5 +601,10 @@ class Engine(object):
                     self.logger.error("(pid={}) failed 20 times with same error, breaking out of loop: {} ".format(
                         os.getpid(), e))
                     return False
+            elif str(e).startswith("An error occurred (MetadataTooLarge) when calling the PutObject operation"):
+                self.logger.error("(pid={}): unrecoverable error: {} ".format(os.getpid(), e))
+                return False
+
+            self.logger.error("(pid={}): may be possible to recover: {} ".format(os.getpid(), e))
 
         return True
