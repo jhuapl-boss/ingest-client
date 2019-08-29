@@ -1,4 +1,4 @@
-# Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -202,7 +202,7 @@ class TestConfiguration(ConfigurationTestMixin, unittest.TestCase):
         with open(cls.config_file, 'rt') as example_file:
             cls.example_config_data = json.load(example_file)
 
-        # Mock api token since you can't bank on ndio being configured
+        # Mock api token since you can't bank on intern being configured
         cls.api_token = "adlsfjadsf"
 
 

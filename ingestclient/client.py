@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,9 +78,9 @@ def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=
         raise Exception('Must provide either a configuration instance or a configuration file')
 
     try:
-        engine = Engine(config_file=config_file, 
+        engine = Engine(config_file=config_file,
                         configuration=configuration,
-                        backend_api_token=api_token, 
+                        backend_api_token=api_token,
                         ingest_job_id=job_id)
     except ConfigFileError as err:
         print("ERROR (pid: {}): {}".format(os.getpid(), err))
@@ -100,7 +100,7 @@ def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=
             # Make sure they want to stop this client, wait for the main process to send the next step
             should_run = pipe.recv()
     always_log_info("  - Process pid={} finished gracefully.".format(os.getpid()))
-    
+
 
 def get_parser():
     parser = argparse.ArgumentParser(description="Client for facilitating large-scale data ingest",
@@ -109,7 +109,7 @@ def get_parser():
 
     parser.add_argument("--api-token", "-a",
                         default=None,
-                        help="Token for API authentication. If not provided and ndio is configured those credentials will automatically be used.")
+                        help="Token for API authentication. If not provided and intern is configured (e.g. env variables or ~/.intern/intern.cfg) those credentials will automatically be used.")
     parser.add_argument("--job-id", "-j",
                         default=None,
                         help="ID of the ingest job if joining an existing ingest job")
@@ -159,7 +159,7 @@ def start_workers(ingest_job_id, args, configuration):
     workers = []
     for i in range(args.processes_nb):
         new_pipe = mp.Pipe(False)
-        new_process = mp.Process(target=worker_process_run, 
+        new_process = mp.Process(target=worker_process_run,
                                  args=(args.api_token, ingest_job_id, new_pipe[0]),
                                  kwargs={'config_file': args.config_file, 'configuration': configuration}
                                  )
@@ -321,9 +321,9 @@ def main(configuration=None, parser_args=None):
 
     # Create an engine instance
     try:
-        engine = Engine(config_file=args.config_file, 
-                        backend_api_token=args.api_token, 
-                        ingest_job_id=args.job_id, 
+        engine = Engine(config_file=args.config_file,
+                        backend_api_token=args.api_token,
+                        ingest_job_id=args.job_id,
                         configuration=configuration)
     except ConfigFileError as err:
         print("ERROR: {}".format(err))

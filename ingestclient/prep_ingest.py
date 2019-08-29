@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ channel.  This property is "ingest_cfg" and is only required when using the
 `--writecfg` option.
 
 Below is a sample JSON input file for this script.  If a property is not marked
-with an "Optional" comment, it must be included in the JSON file.  In the 
+with an "Optional" comment, it must be included in the JSON file.  In the
 sample JSON, below, the values assigned to the optional properties are the
 default values that will be used if you do not provide these properties.  The
 exception is "ingest_cfg" as explained previously.
@@ -277,7 +277,7 @@ def parse_args():
         (Namespace)
     """
     parser = argparse.ArgumentParser(
-        description='Script that creates the collection/experiment/channel for ingest.  ' + 
+        description='Script that creates the collection/experiment/channel for ingest.  ' +
         'To supply arguments from a file, provide the filename prepended with an `@`.',
         fromfile_prefix_chars = '@')
     parser.add_argument(

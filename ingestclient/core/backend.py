@@ -1,4 +1,4 @@
-# Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -511,7 +511,7 @@ class BossBackend(Backend):
 
         if r.status_code == 204:
             return True
-        
+
         # Verification process ran but still have work to do.
         if r.status_code == 202:
             return False
@@ -592,7 +592,7 @@ class BossBackend(Backend):
 
     def put_task(self, msg, max_retries):
         """
-        Place the message from the upload queue on the tile index queue so the 
+        Place the message from the upload queue on the tile index queue so the
         tile index is updated.
 
         Args:
