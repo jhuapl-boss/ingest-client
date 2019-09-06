@@ -17,6 +17,7 @@ from PIL import Image
 import numpy as np
 import os
 from io import BytesIO
+import time
 
 import requests as req
 from intern.remote.boss import BossRemote
@@ -391,12 +392,16 @@ class CatmainURLTileProcessor(TileProcessor):
                 try:
                     url = CATMAID_URL + str(z_index) + '/' + str(y_index) + '/' + str(x_index) + "." + FORMAT
                     r = req.get(url)
-                    try:
+                    if r.status_code == 403:
+                        print("=== \nRequest Err:{} \n{} \nreplacing with Zeros".format(r.status_code, url))
+                        data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]), dtype=np.int32, order="C")
+                    elif r.status_code == 200:
                         data = Image.open(BytesIO(r.content))
                         data = np.asarray(data, np.uint32)
-                    except OSError as e:
-                        print("=== \n{} not found, replacing with Zeros".format(url))
-                        data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]), dtype=np.int32, order="C")
+                    else: 
+                        print("=== \nRequest Err:{}; attempting again".format(r.status_code))
+                        print(url)
+                        raise Exception
                     break
                 except Exception as err:
                     if cnt > 5:
