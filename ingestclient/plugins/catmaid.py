@@ -17,10 +17,7 @@ from PIL import Image
 import numpy as np
 import os
 from io import BytesIO
-<<<<<<< HEAD
-=======
 import time
->>>>>>> aea324fe3c5363936ce62a6febb4856859403bac
 
 import requests as req
 from intern.remote.boss import BossRemote
