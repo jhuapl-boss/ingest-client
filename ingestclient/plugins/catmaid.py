@@ -17,6 +17,10 @@ from PIL import Image
 import numpy as np
 import os
 from io import BytesIO
+<<<<<<< HEAD
+=======
+import time
+>>>>>>> aea324fe3c5363936ce62a6febb4856859403bac
 
 import requests as req
 from intern.remote.boss import BossRemote
@@ -381,7 +385,7 @@ class CatmainURLTileProcessor(TileProcessor):
         CATMAID_URL = self.parameters["url"]
         FORMAT = self.parameters["filetype"]
 
-         if z_index + self.parameters["z_offset"] < 0:
+        if z_index + self.parameters["z_offset"] < 0:
             data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]),
                             dtype=np.int32, order="C")
         else:
