@@ -381,7 +381,7 @@ class CatmainURLTileProcessor(TileProcessor):
         CATMAID_URL = self.parameters["url"]
         FORMAT = self.parameters["filetype"]
 
-        if z_index + self.parameters["z_offset"] < 0:
+         if z_index + self.parameters["z_offset"] < 0:
             data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]),
                             dtype=np.int32, order="C")
         else:
@@ -391,12 +391,16 @@ class CatmainURLTileProcessor(TileProcessor):
                 try:
                     url = CATMAID_URL + str(z_index) + '/' + str(y_index) + '/' + str(x_index) + "." + FORMAT
                     r = req.get(url)
-                    try:
+                    if r.status_code == 403:
+                        print("=== \nRequest Err:{} \n{} \nreplacing with Zeros".format(r.status_code, url))
+                        data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]), dtype=np.int32, order="C")
+                    elif r.status_code == 200:
                         data = Image.open(BytesIO(r.content))
                         data = np.asarray(data, np.uint32)
-                    except OSError as e:
-                        print("=== \n{} not found, replacing with Zeros".format(url))
-                        data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]), dtype=np.int32, order="C")
+                    else: 
+                        print("=== \nRequest Err:{}; attempting again".format(r.status_code))
+                        print(url)
+                        raise Exception
                     break
                 except Exception as err:
                     if cnt > 5:
