@@ -404,7 +404,7 @@ class BossBackend(Backend):
         while True:
             r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
                              headers=self.api_headers, verify=self.validate_ssl)
-            if r.status_code in [500, 502]:
+            if r.status_code in [500, 502, 503]:
                 retries += 1
                 if retries > maximum_retries:
                     raise Exception("After {} attempts, failed to join ingest job: {}".format(maximum_retries, r.text))
@@ -629,7 +629,7 @@ class BossBackend(Backend):
         while True:
             r = requests.get('{}/{}/ingest/{}/status'.format(self.host, self.api_version, ingest_job_id),
                              headers=self.api_headers, verify=self.validate_ssl)
-            if r.status_code in [500, 502]:
+            if r.status_code in [500, 502, 503]:
                 retries += 1
                 if retries > maximum_retries:
                     raise Exception("After {} attempts, failed to join ingest job: {}".format(maximum_retries, r.text))
