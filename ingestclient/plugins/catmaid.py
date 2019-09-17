@@ -322,13 +322,9 @@ class CatmaidURLPathProcessor(PathProcessor):
         Method to compute the file path for the indicated tile
 
         Args:
-            x_index(int): The tile index in the X dimension
-            y_index(int): The tile index in the Y dimension
-            z_index(int): The tile index in the Z dimension
-            t_index(int): The time index
-
+            Ignored
         Returns:
-            (str): An absolute file path that contains the specified data
+            (str): Empty string
 
         """
         return ""
