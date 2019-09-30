@@ -1,4 +1,4 @@
-# Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ from abc import ABCMeta, abstractmethod
 import six
 import jsonschema
 import json
-from .consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z 
+from .consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z
 
 
 @six.add_metaclass(ABCMeta)

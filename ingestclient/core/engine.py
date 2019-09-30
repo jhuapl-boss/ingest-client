@@ -1,4 +1,4 @@
-# Copyright 2016 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from .config import Configuration, ConfigFileError
 from collections import deque
 import blosc
 import numpy as np
-from .consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z 
+from .consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z
 from ..plugins.chunk import XYZ_ORDER, ZYX_ORDER, XYZT_ORDER, TZYX_ORDER
 
 
@@ -220,7 +220,7 @@ class Engine(object):
 
     def _get_units(self):
         """Get appropriate units (tiles or chunks) for reporting status
-        
+
         Returns:
             (str): 'tiles' or 'chunks'
 
@@ -455,7 +455,7 @@ class Engine(object):
         # Success, so remove message from upload queue.
         if not self.backend.delete_task(message_id, receipt_handle):
             return False
-        
+
         return True
 
     def upload_chunk(self, msg, message_id, receipt_handle):
