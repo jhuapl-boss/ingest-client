@@ -16,6 +16,13 @@ import six
 from PIL import Image
 import numpy as np
 import os
+from io import BytesIO
+import time
+
+import requests as req
+from intern.remote.boss import BossRemote
+from intern.resource.boss.resource import ChannelResource
+from intern.service.boss.v1.volume import CacheMode
 
 from .path import PathProcessor
 from .tile import TileProcessor
@@ -288,6 +295,120 @@ class CatmaidFileImageStackTileProcessor(TileProcessor):
 
         output = six.BytesIO()
         tile_data.save(output, format=self.parameters["filetype"].upper())
+
+        # Send handle back
+        return output
+
+class CatmaidURLPathProcessor(PathProcessor):
+    """Class for simple image stacks that only increment in Z, uses the dynamic filesystem utility"""
+    def __init__(self):
+        """Constructor to add custom class var"""
+        PathProcessor.__init__(self)
+
+    def setup(self, parameters):
+        """Set the params
+
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+        """
+        pass
+
+    def process(self, x_index, y_index, z_index, t_index=None):
+        """
+        Method to compute the file path for the indicated tile
+
+        Args:
+            Ignored
+        Returns:
+            (str): Empty string
+
+        """
+        return ""
+
+
+class CatmainURLTileProcessor(TileProcessor):
+    """A Tile processor for a single image file identified by z index"""
+
+    def __init__(self):
+        """Constructor to add custom class var"""
+        TileProcessor.__init__(self)
+
+    def setup(self, parameters):
+        """ Method to load the file for uploading data. Assumes intern token is set via environment variable or config
+        default file
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+
+        MUST HAVE THE CUSTOM PARAMETERS: "x_offset": offset to apply when querying the Boss
+                                         "y_offset": offset to apply when querying the Boss
+                                         "z_offset": offset to apply when querying the Boss
+                                         "x_tile": size of a tile in x dimension
+                                         "y_tile": size of a tile in y dimension
+                                         "collection": source collection
+                                         "experiment": source experiment
+                                         "channel": source channel
+                                         "resolution": source resolution
+
+        Returns:
+            None
+        """
+        self.parameters = parameters
+
+    def process(self, file_path, x_index, y_index, z_index, t_index=0):
+        """
+        Method to load the image file.
+
+        Args:
+            file_path(str): An absolute file path for the specified tile
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+            t_index(int): The time index
+
+        Returns:
+            (io.BufferedReader): A file handle for the specified tile
+
+        """
+        CATMAID_URL = self.parameters["url"]
+        FORMAT = self.parameters["filetype"]
+
+        if z_index + self.parameters["z_offset"] < 0:
+            data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]),
+                            dtype=np.int32, order="C")
+        else:
+            # Get data
+            cnt = 0
+            while cnt < 5:
+                try:
+                    url = CATMAID_URL + str(z_index) + '/' + str(y_index) + '/' + str(x_index) + "." + FORMAT
+                    r = req.get(url)
+                    if r.status_code == 403:
+                        print("=== \nRequest Err:{} \n{} \nreplacing with Zeros".format(r.status_code, url))
+                        data = np.zeros((self.parameters["x_tile"], self.parameters["y_tile"]), dtype=np.int32, order="C")
+                    elif r.status_code == 200:
+                        data = Image.open(BytesIO(r.content))
+                        data = np.asarray(data, np.uint32)
+                    else: 
+                        print("=== \nRequest Err:{}; attempting again".format(r.status_code))
+                        print(url)
+                        raise Exception
+                    break
+                except Exception as err:
+                    if cnt > 5:
+                        raise err
+                    cnt += 1
+                    time.sleep(10)
+
+        # Save sub-img to png and return handle
+        upload_img = Image.fromarray(np.squeeze(data))
+        output = six.BytesIO()
+        upload_img.save(output, format="TIFF")
 
         # Send handle back
         return output

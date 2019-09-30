@@ -1,0 +1,56 @@
+{
+    "schema": {
+        "name": "boss-v0.1-schema",
+        "validator": "BossValidatorV01"
+    },
+    "client": {
+      "backend": {
+        "name": "boss",
+        "class": "BossBackend",
+        "host": "api.bossdb.io",
+        "protocol": "https"
+      },
+      "path_processor": {
+        "class": "ingestclient.plugins.catmaid.CatmaidURLPathProcessor",
+        "params": {
+          "root_dir": "",
+          "filetype": "jpg"
+        }
+      },
+      "tile_processor": {
+        "class": "ingestclient.plugins.catmaid.CatmainURLTileProcessor",
+        "params": {
+          "url": "http://neurodata-catmaid.s3-website-us-east-1.amazonaws.com/0/",
+          "filetype": "jpg",
+          "x_offset": 0,
+          "y_offset": 0,
+          "z_offset": 0,
+          "x_tile": 1024,
+          "y_tile": 1024
+        }
+      }
+    },
+    "database": {
+      "collection": "COLLECTION",
+      "experiment": "EXPERIMENT",
+      "channel": "CHANNEL"
+    },
+    "ingest_job": {
+      "resolution": 0,
+      "extent": {
+        "x": [0, 61952],
+        "y": [0, 46592],
+        "z": [0, 2156],
+        "t": [0, 1]
+      },
+      "tile_size": {
+        "x": 512,
+        "y": 512,
+        "z": 1,
+        "t": 1
+      }
+    }
+  }
+  
+  
+  
