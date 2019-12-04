@@ -20,8 +20,10 @@ from .chunk import ChunkProcessor, XYZT_ORDER
 
 from cloudvolume import CloudVolume
 
+
 class CloudVolumePathProcessor(PathProcessor):
     """Class for simple image stacks that only increment in Z, uses the dynamic filesystem utility"""
+
     def __init__(self):
         """Constructor to add custom class var"""
         PathProcessor.__init__(self)
@@ -82,12 +84,16 @@ class CloudVolumeChunkProcessor(ChunkProcessor):
 
         # Remove 'ingest_job' key so rest of parameters can be passed to the
         # CloudVolume constructor.
-        self.ingest_job = self.parameters.pop('ingest_job')
+        self.ingest_job = self.parameters.pop("ingest_job")
+        if "cv_offset" in self.parameters:
+            self.offset = self.parameters.pop("cv_offset")
+        else:
+            self.offset = [0, 0, 0]
         self.vol = CloudVolume(**self.parameters)
 
     def process(self, file_path, x_index, y_index, z_index):
         """
-        Method to take a chunk indices and return an ndarray with the correct data
+        Method to take a chunk indices and return an ndarray with the correct data.
 
         Args:
             file_path(str): An absolute file path for the specified chunk
@@ -102,9 +108,9 @@ class CloudVolumeChunkProcessor(ChunkProcessor):
         y_size = self.ingest_job["chunk_size"]["y"]
         z_size = self.ingest_job["chunk_size"]["z"]
 
-        x_start = x_index * x_size;
-        y_start = y_index * y_size;
-        z_start = z_index * z_size;
+        x_start = x_index * x_size
+        y_start = y_index * y_size
+        z_start = z_index * z_size
 
         x_stop = x_start + x_size
         y_stop = y_start + y_size
@@ -117,4 +123,11 @@ class CloudVolumeChunkProcessor(ChunkProcessor):
         if z_stop > self.vol.bounds.maxpt[2]:
             z_stop = self.vol.bounds.maxpt[2]
 
-        return self.vol[x_start:x_stop, y_start:y_stop, z_start:z_stop], XYZT_ORDER
+        return (
+            self.vol[
+                x_start + self.offset[0] : x_stop + self.offset[0],
+                y_start + self.offset[1] : y_stop + self.offset[1],
+                z_start + self.offset[2] : z_stop + self.offset[2],
+            ],
+            XYZT_ORDER,
+        )
