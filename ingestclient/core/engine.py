@@ -48,6 +48,7 @@ class Engine(object):
         self.path_processor = None
         self.backend_api_token = backend_api_token
         self.credential_create_time = None
+        self.status_frequency_seconds = 30
         self.logger = logging.getLogger('ingest-client')
 
         # Number of cuboids in a chunk for volumetric ingest.  This will be
@@ -268,16 +269,32 @@ class Engine(object):
 
                 avg_tile_rate = sum(tile_rate_samples) / float(len(tile_rate_samples))
 
-            if (time.time() - print_time) > 30:
+            if (time.time() - print_time) > self.status_frequency_seconds:
                 print_time = time.time()
-                # Print an update every 30 seconds
+                # Print an update every self.status_frequency_seconds seconds
                 if status:
                     if status["current_message_count"] != 0:
-                        log_str = "Uploading ~{:.2f} {}/min".format(avg_tile_rate * 6, units)
-                        log_str += " - Approx {:d} of {:d} {} remaining".format(status["current_message_count"],
-                                                                                status["total_message_count"],
-                                                                                units)
-                        log_str += " - Elapsed time {:.2f} minutes".format((time.time() - start_time) / 60)
+                        log_str = "Uploading ~{:.2f} {}/min".format(
+                            avg_tile_rate * 6, units
+                        )
+                        remaining_min = status["current_message_count"] / avg_tile_rate
+                        eta_text = "calculating ETA..."
+                        if remaining_min > 60*24:
+                            eta_text = "ETA: {:.2f} days".format(remaining_min / (60/24))
+                        elif remaining_min > 60:
+                            eta_text = "ETA: {:.2f} hours".format(remaining_min / 60)
+                        else:
+                            eta_text = "ETA: {:.2f} minutes"
+
+                        log_str += " - Approx {:d} of {:d} {} remaining, {}".format(
+                            status["current_message_count"],
+                            status["total_message_count"],
+                            units,
+                            eta_text,
+                        )
+                        log_str += " - Elapsed time {:.2f} minutes".format(
+                            (time.time() - start_time) / 60
+                        )
                         always_log_info(log_str)
                     else:
                         log_str = "Waiting to ensure all upload tasks have been processed. Just a few minutes longer..."
