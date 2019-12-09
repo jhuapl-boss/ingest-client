@@ -280,11 +280,11 @@ class Engine(object):
                         remaining_min = status["current_message_count"] / avg_tile_rate
                         eta_text = "calculating ETA..."
                         if remaining_min > 60*24:
-                            eta_text = "ETA: {:.2f} days".format(remaining_min / (60/24))
+                            eta_text = "ETA: {:.2f} days".format(remaining_min / (60 * 24))
                         elif remaining_min > 60:
                             eta_text = "ETA: {:.2f} hours".format(remaining_min / 60)
                         else:
-                            eta_text = "ETA: {:.2f} minutes"
+                            eta_text = "ETA: {:.2f} minutes".format(remaining_min)
 
                         log_str += " - Approx {:d} of {:d} {} remaining, {}".format(
                             status["current_message_count"],
