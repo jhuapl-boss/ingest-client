@@ -96,6 +96,7 @@ class ZindexStackPathProcessor(PathProcessor):
             base_str = base_str.replace("<{}{}>".format(m[0], m[1]), z_str)
 
         # prepend root, append extension
+        base_str = base_str.replace("<z>", str(z_index)).replace("<y>", str(y_index)).replace("<x>", str(x_index))
         return os.path.join(self.parameters['root_dir'], "{}.{}".format(base_str, self.parameters['extension']))
 
 
@@ -123,6 +124,7 @@ class ZindexStackTileProcessor(TileProcessor):
         """
         self.parameters = parameters
         self.fs = DynamicFilesystem(parameters['filesystem'], parameters)
+        self.fail_gracefully = parameters.get("fail_gracefully", False)
 
     def process(self, file_path, x_index, y_index, z_index, t_index=0):
         """
@@ -141,7 +143,14 @@ class ZindexStackTileProcessor(TileProcessor):
 
         """
         # Load tile
-        file_handle = self.fs.get_file(file_path)
+        if self.fail_gracefully:
+            try:
+                file_handle = self.fs.get_file(file_path)
+            except Exception as e:
+                # TODO: Should probably catch only specific errors here.
+                return six.BytesIO()
+        else:
+            file_handle = self.fs.get_file(file_path)
 
         x_range = [self.parameters["ingest_job"]["tile_size"]["x"] * x_index,
                    self.parameters["ingest_job"]["tile_size"]["x"] * (x_index + 1)]
