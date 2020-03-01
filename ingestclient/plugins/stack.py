@@ -1,4 +1,4 @@
-# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2020 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -148,7 +148,10 @@ class ZindexStackTileProcessor(TileProcessor):
                 file_handle = self.fs.get_file(file_path)
             except Exception as e:
                 # TODO: Should probably catch only specific errors here.
-                return six.BytesIO()
+                output = six.BytesIO()
+                upload_img = np.zeros((self.parameters["ingest_job"]["tile_size"]["x"], self.parameters["ingest_job"]["tile_size"]["y"]), dtype="uint8")
+                Image.fromarray(upload_img).save(output, format=canonical_extension(self.parameters["extension"]))
+                return output
         else:
             file_handle = self.fs.get_file(file_path)
 
@@ -167,9 +170,8 @@ class ZindexStackTileProcessor(TileProcessor):
             print("Your data type is not uint8, uint16 or uint64, converting to uint8 and attempting upload.")
             tile_arr = np.uint8(tile_arr/256)
             tile_data = Image.fromarray(tile_arr)
-        upload_img = tile_data.crop((x_range[0], y_range[0], x_range[1], y_range[1]))
         output = six.BytesIO()
-        upload_img.save(output, format=canonical_extension(self.parameters["extension"]))
+        tile_data.save(output, format=canonical_extension(self.parameters["extension"]))
 
         # Send handle back
         return output
