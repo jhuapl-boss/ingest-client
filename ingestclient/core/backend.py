@@ -412,7 +412,7 @@ class BossBackend(Backend):
                 exp_backoff = 100 * 2 ** (retries + 4)  # in ms
                 pause_for = random.uniform(1, min(max_pause_in_ms, exp_backoff)) / 1000  # in secs
                 if r.status_code == 400:
-                    print(r.text)   # Can see rate is being exceeded and if any other 400s that are occuring.
+                    print(r.text)   # Can see if rate is being exceeded and if any other 400s are occuring.
                 print("Join request failed with code: {}, retry attempt: {}, pausing for {:0.3f} seconds before retrying.".format(r.status_code, retries, pause_for))
                 time.sleep(pause_for)
             elif r.status_code != 200:
