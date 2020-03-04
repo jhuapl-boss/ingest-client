@@ -399,7 +399,7 @@ class BossBackend(Backend):
         """
 
         wp = WaitPrinter()
-        maximum_retries = 100
+        maximum_retries = 1000
         retries = 0
         while True:
             r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
@@ -410,8 +410,8 @@ class BossBackend(Backend):
                     raise Exception("After {} attempts, failed to join ingest job: {}".format(maximum_retries, r.text))
 
                 exp_backoff = 100 * 2 ** retries  # in ms
-                pause_for = random.uniform(1, min(30000, exp_backoff)) / 1000
-                print("Join request failed with: {} pausing for {:0.3f} seconds before retrying.".format(r.status_code, pause_for))
+                pause_for = random.uniform(1, min(300000, exp_backoff)) / 1000
+                print("Join request failed with: code {}, pausing for {:0.3f} seconds before retrying.".format(r.status_code, pause_for))
                 time.sleep(pause_for)
             elif r.status_code != 200:
                 raise Exception("Failed to join ingest job: {}".format(r.text))
