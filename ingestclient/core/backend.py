@@ -411,10 +411,10 @@ class BossBackend(Backend):
 
                 exp_backoff = 100 * 2 ** retries  # in ms
                 pause_for = random.uniform(1, min(300000, exp_backoff)) / 1000
-                print("Join request failed with: code {}, pausing for {:0.3f} seconds before retrying.".format(r.status_code, pause_for))
+                print("Join request failed with code: {}, retry attempt: {}, pausing for {:0.3f} seconds before retrying.".format(r.status_code, retries, pause_for))
                 time.sleep(pause_for)
             elif r.status_code != 200:
-                raise Exception("Failed to join ingest job: {}".format(r.text))
+                raise Exception("Failed to join ingest job after {} retry attempts: {}".format(retries, r.text))
             else:
                 result = r.json()
                 job_status = int(result['ingest_job']["status"])
