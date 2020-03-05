@@ -399,22 +399,24 @@ class BossBackend(Backend):
         """
 
         wp = WaitPrinter()
-        maximum_retries = 100
+        maximum_retries = 1000
         retries = 0
+        max_pause_in_ms = 1000000
         while True:
             r = requests.get('{}/{}/ingest/{}'.format(self.host, self.api_version, ingest_job_id),
                              headers=self.api_headers, verify=self.validate_ssl)
-            if r.status_code in [500, 502, 503]:
+            if r.status_code in [400, 500, 502, 503]:
                 retries += 1
                 if retries > maximum_retries:
                     raise Exception("After {} attempts, failed to join ingest job: {}".format(maximum_retries, r.text))
-
-                exp_backoff = 100 * 2 ** retries  # in ms
-                pause_for = random.uniform(1, min(30000, exp_backoff)) / 1000
-                print("Join request failed with: {} pausing for {:0.3f} seconds before retrying.".format(r.status_code, pause_for))
+                exp_backoff = 100 * 2 ** (retries + 4)  # in ms
+                pause_for = random.uniform(1, min(max_pause_in_ms, exp_backoff)) / 1000  # in secs
+                if r.status_code == 400:
+                    print(r.text)   # Can see if rate is being exceeded and if any other 400s are occuring.
+                print("Join request failed with code: {}, retry attempt: {}, pausing for {:0.3f} seconds before retrying.".format(r.status_code, retries, pause_for))
                 time.sleep(pause_for)
             elif r.status_code != 200:
-                raise Exception("Failed to join ingest job: {}".format(r.text))
+                raise Exception("Failed to join ingest job after {} retry attempts: {}".format(retries, r.text))
             else:
                 result = r.json()
                 job_status = int(result['ingest_job']["status"])
