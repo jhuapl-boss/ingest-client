@@ -17,17 +17,59 @@ from abc import ABCMeta, abstractmethod
 import requests
 import json
 import boto3
+from enum import Enum
 import hashlib
-from six.moves import configparser
+import configparser
 import time
 import botocore
-from pkg_resources import resource_filename
 import os
 import random
 
 from ..utils import WaitPrinter
 from ..utils.log import always_log_info
 from ..utils.backoff import get_wait_time
+
+
+class IngestStatus(Enum):
+    """Return values used by upload()."""
+    STOP = 0            # Stop ingest.
+    UPLOAD = 1          # Continue uploading.
+    WAIT = 2            # Wait on the backend to finish something.
+    COMPLETING = 3      # Start polling job status while the backend verifies job.
+
+
+class BackendStatus(Enum):
+    """This enum mirrors boss.git/django/bossingest/models.py"""
+    PREPARING = 0
+    UPLOADING = 1
+    COMPLETE = 2
+    DELETED = 3
+    FAILED = 4
+    COMPLETING = 5
+    WAIT_ON_QUEUES = 6
+
+def convert_backend_to_ingest_status(status):
+    """
+    Convert a BackendStatus value to equivalent IngestStatus value for use by
+    client.py.
+
+    Args:
+        status (BackendStatus)
+
+    Returns:
+        (IngestStatus)
+
+    Raises:
+        (ValueError): if not given a known BackendStatus value.
+    """
+    if status in [BackendStatus.PREPARING, BackendStatus.UPLOADING]:
+        return IngestStatus.UPLOAD
+    if status in [BackendStatus.COMPLETE, BackendStatus.DELETED, BackendStatus.FAILED]:
+        return IngestStatus.STOP
+    if status in [BackendStatus.COMPLETING, BackendStatus.WAIT_ON_QUEUES]:
+        return IngestStatus.WAIT
+
+    raise ValueError('Unknown status: {}'.format(status))
 
 
 @six.add_metaclass(ABCMeta)
@@ -129,7 +171,7 @@ class Backend(object):
             ingest_job_id(int): The ID of the job you'd like to complete
 
         Returns:
-            (bool): True on successful completion
+            (IngestStatus, int | None)): Status plus number of seconds to wait if IngestStatus.WAIT
 
 
         """
@@ -481,7 +523,7 @@ class BossBackend(Backend):
             ingest_job_id(int): The ID of the job you'd like to complete
 
         Returns:
-            (bool): True if ingest complete
+            (IngestStatus, int): Status and number of secs to keep waiting
 
 
         """
@@ -489,37 +531,27 @@ class BossBackend(Backend):
                           headers=self.api_headers, verify=self.validate_ssl)
 
         if r.status_code == 204:
-            return True
+            return IngestStatus.STOP, 0
+
+        try:
+            data = r.json()
+        except Exception as ex:
+            raise Exception("Error parsing response from backend: {}".format(ex))
+
+        if r.status_code == 400:
+            if 'wait_secs' in data:
+                return IngestStatus.WAIT, data['wait_secs']
+
         if r.status_code == 202:
-            # Not all chunks ingested.
-            return False
+            if 'job_status' in data:
+                status = BackendStatus(data['job_status'])
+                if status == BackendStatus.WAIT_ON_QUEUES:
+                    if 'wait_secs' in data:
+                        return IngestStatus.WAIT, data['wait_secs']
+                elif status == BackendStatus.COMPLETING:
+                    return IngestStatus.COMPLETING, 0
 
-        raise Exception("Failed to complete ingest job: {}".format(r.json()))
-
-    def verify(self, ingest_job_id):
-        """
-        Method to start verification of an ingest job
-
-        Args:
-            ingest_job_id(int): The ID of the job you'd like to verify
-
-        Returns:
-            (bool): True if verified, False if there are outstanding tiles
-
-
-        """
-        r = requests.post('{}/{}/ingest/{}/verify'.format(self.host, self.api_version, ingest_job_id),
-                          headers=self.api_headers, verify=self.validate_ssl)
-
-        if r.status_code == 204:
-            return True
-
-        # Verification process ran but still have work to do.
-        if r.status_code == 202:
-            return False
-
-        # Something went wrong.
-        raise Exception("Failed to verify ingest job: {}".format(r.json()))
+        raise Exception("Failed to complete ingest job: {}".format(data))
 
     def get_task(self, num_messages=1):
         """

@@ -11,25 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from six.moves import input
 import logging
 import datetime
 import json
 import time
 from ..utils.log import always_log_info
 import os
-from math import floor
-import random
 from .config import Configuration, ConfigFileError
 from collections import deque
 import blosc
 import numpy as np
 from .consts import BOSS_CUBOID_X, BOSS_CUBOID_Y, BOSS_CUBOID_Z
-from ..plugins.chunk import XYZ_ORDER, ZYX_ORDER, XYZT_ORDER, TZYX_ORDER
+from ..plugins.chunk import XYZ_ORDER, ZYX_ORDER, XYZT_ORDER
+from .backend import BackendStatus, IngestStatus
+from random import randint
 
 
 class Engine(object):
-    def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None):
+    def __init__(self, config_file=None, backend_api_token=None, ingest_job_id=None, configuration=None, run_complete=True):
         """
         A class to implement the core upload client workflow engine
 
@@ -38,6 +37,7 @@ class Engine(object):
             ingest_job_id (int): ID of the ingest job you want to work on
             backend_api_token (str): The authorization token for the Backend if used
             configuration(ingestclient.core.config.Configuration): A pre-loaded configuration instance
+            run_complete (bool): Run ingest completion when done
         """
         self.config = None
         self.msg_wait_iterations = 20  # Each iteration waits for 10 seconds for incoming messages
@@ -50,6 +50,7 @@ class Engine(object):
         self.credential_create_time = None
         self.status_frequency_seconds = 30
         self.logger = logging.getLogger('ingest-client')
+        self.run_complete = run_complete
 
         # Number of cuboids in a chunk for volumetric ingest.  This will be
         # updated from the ingest config.
@@ -177,13 +178,8 @@ class Engine(object):
         """
         Method to join an ingest job upload
 
-        Job Status: {0: Preparing, 1: Uploading, 2: Complete}
-
-        Args:
-
-
         Returns:
-            None
+            (BackendStatus)
 
 
         """
@@ -192,6 +188,8 @@ class Engine(object):
         # Set cred time
         self.credential_create_time = datetime.datetime.now()
         always_log_info("(pid={}) JOINED INGEST JOB: {}".format(os.getpid(), self.ingest_job_id))
+
+        return BackendStatus(self.job_status)
 
     def cancel(self):
         """
@@ -213,11 +211,77 @@ class Engine(object):
         Args:
 
         Returns:
-            (bool): True if successfully completed job.
+            (IngestStatus, int): Status and number of secs to keep waiting
 
 
         """
         return self.backend.complete(self.ingest_job_id)
+
+    def _internal_complete(self):
+        """
+        Run complete from within the run() method.
+
+        Returns:
+                (IngestStatus): STOP | UPLOAD
+        """
+        status = self.wait_on_queues(0)
+        if status == IngestStatus.COMPLETING:
+            always_log_info("(pid={}) Waiting on backend completion process".format(os.getpid()))
+            if self.wait_on_completing():
+                return IngestStatus.STOP
+        return IngestStatus.UPLOAD
+
+    def wait_on_queues(self, wait_secs):
+        """
+        Begin waiting for queues to definitely be definitely be empty.
+
+        After waiting, will send the complete command to the backend again.
+
+        Args:
+            wait_secs (int): Number of seconds to wait.
+
+        Returns:
+            (IngestStatus): STOP | UPLOAD
+        """
+        sleep_secs = wait_secs
+        while True:
+            if sleep_secs > 0:
+                always_log_info('(pid={}) Waiting {} seconds for queues to clear.'.format(os.getpid(), sleep_secs))
+            time.sleep(sleep_secs)
+            status, sleep_secs = self.complete()
+            if status != IngestStatus.WAIT:
+                return status
+
+    def wait_on_completing(self):
+        """
+        Wait on backend to do final verification of the job.
+
+        Start polling backend for job status.  Expect to see one of three states:
+        COMPLETING, COMPLETE, or UPLOADING.  Keep waiting while in the COMPLETING
+        state.  Return True if COMPLETE or False if UPLOADING.
+
+        Args:
+
+        Returns:
+            (bool): True if job complete.  False means start uploading again.
+
+        Raises:
+            (Exception): When unexpected status returned by the backend.
+        """
+        status = BackendStatus.COMPLETING
+        while status == BackendStatus.COMPLETING:
+            time.sleep(randint(2, 5))
+            print('.', end='')
+            raw_status = self.backend.get_job_status(self.ingest_job_id)
+            if 'status' in raw_status:
+                status = BackendStatus(raw_status['status'])
+        print('.')
+        if status == BackendStatus.COMPLETE:
+            return True
+        if status == BackendStatus.UPLOADING:
+            return False
+
+        raise Exception('Got unexpected ingest status: {}'.format(status))
 
     def _get_units(self):
         """Get appropriate units (tiles or chunks) for reporting status
@@ -371,6 +435,11 @@ class Engine(object):
             if not msg:
                 time.sleep(10)
                 wait_cnt += 1
+                if wait_cnt > 3 and self.run_complete:
+                    if self._internal_complete() == IngestStatus.STOP:
+                        break
+                    wait_cnt = 0
+                    continue
                 if wait_cnt < self.msg_wait_iterations:
                     continue
                 else:
