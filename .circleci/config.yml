@@ -1,110 +1,67 @@
 # Python CircleCI 2.0 configuration file
-#
 version: 2
 
+"-": &test_steps
+  steps:
+    - checkout
+    
+    - restore_cache:  # ensure this step occurs *before* installing dependencies
+        keys:
+          - cache-{{ checksum "requirements.txt" }}
+          - cache-
+            
+    - run:
+        name: Installing pip requirements at top level
+        command: |
+          sudo pip install -r requirements.txt
+            
+    - run:
+        name: Installing pip cloudvolume_requirements
+        command: |
+          sudo pip install -r ingestclient/plugins/requirements/cloudvolume_requirements.txt
+            
+    - save_cache:
+        paths:
+          - ~/.local
+          - ~/.cache
+        key: cache-{{ checksum "requirements.txt" }}
+
+    ####  Run Tests
+    - run:
+        name: Setup Dummy AWS creds
+        command: |
+          mkdir ~/.aws
+          echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
+          echo -e "[default]\nregion = us-east-1\noutput = json" > ~/.aws/config        
+
+    - run:
+        name: Running py3 tests ... python unit tests 
+        command: |
+          python -m unittest -v  
+
+    - store_artifacts:
+        path: /tmp
+        destination: py3_tests
+
+
 jobs:
-
-  test_py3:
-    working_directory: ~/py3
+  test_py3_8:
+    <<: *test_steps
     docker:
-      - image: circleci/python:3.6.5
-
-    steps:
-        - checkout
-        
-        - restore_cache:  # ensure this step occurs *before* installing dependencies
-            keys:
-              - cache-{{ checksum "requirements.txt" }}
-              - cache-
-                
-        - run:
-            name: Installing pip requirements at top level
-            command: |
-              sudo pip install -r requirements.txt
-                
-        - run:
-            name: Installing pip cloudvolume_requirements
-            command: |
-              sudo pip install -r ingestclient/plugins/requirements/cloudvolume_requirements.txt
-                
-        - save_cache:
-            paths:
-              - ~/.local
-              - ~/.cache
-            key: cache-{{ checksum "requirements.txt" }}
-
-        ####  Run Tests
-
-        - run:
-            name: Setup Dummy AWS creds
-            command: |
-              mkdir ~/.aws
-              echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
-              echo -e "[default]\nregion = us-east-1\noutput = json" > ~/.aws/config        
-
-        - run:
-            name: Running py3 tests ... python unit tests 
-            command: |
-              python -m unittest -v  
-
-
-        - store_artifacts:
-            path: /tmp
-            destination: py3_tests
-
-  test_py2:
-    working_directory: ~/py2
+      - image: circleci/python:3.8
+  test_py3_7:
+    <<: *test_steps
     docker:
-      - image: circleci/python:2.7.15
-
-    steps:
-        - checkout
-        
-        - restore_cache:  # ensure this step occurs *before* installing dependencies
-            keys:
-              - cache-{{ checksum "requirements.txt" }}
-              - cache-
-                
-        - run:
-            name: Installing pip requirements at root level
-            command: |
-              sudo pip install -r requirements.txt
-                
-        - run:
-            name: Installing pip cloudvolume_requirements
-            command: |
-              sudo pip install -r ingestclient/plugins/requirements/cloudvolume_requirements.txt
-                
-        - save_cache:
-            paths:
-              - ~/.local
-              - ~/.cache
-            key: cache-{{ checksum "requirements.txt" }}
-
-        ####  Run Tests
-
-        - run:
-            name: Setup Dummy AWS creds
-            command: |
-              mkdir ~/.aws
-              echo -e "[default]\naws_access_key_id = foo\naws_secret_access_key = bar" > ~/.aws/credentials
-              echo -e "[default]\nregion = us-east-1\noutput = json" > ~/.aws/config        
-
-        - run:
-            name: Running py2 tests ... python unit tests 
-            command: |
-              python -m unittest discover -v  
-              
-
-        - store_artifacts:
-            path: /tmp
-            destination: py2_tests
+      - image: circleci/python:3.7
+  test_py3_6:
+    <<: *test_steps
+    docker:
+      - image: circleci/python:3.6
 
 workflows:
   version: 2
-  test_py_2_and_3:
-    #run both jobs  (for py2 and py3 envs)
+  test_all:
     jobs:
-      - test_py3
-      - test_py2
-    
+      - test_py3_8
+      - test_py3_7
+      - test_py3_6
