@@ -8,7 +8,7 @@ A Python command line application for performing distributed ingest of data into
 [![CircleCI](https://circleci.com/gh/jhuapl-boss/ingest-client/tree/master.svg?style=svg)](https://circleci.com/gh/jhuapl-boss/ingest-client/tree/master)
 
 ## Overview
-The ingest client application lets users move data from local storage into the Boss, quickly and reliably. It supports both Python 2 and 3. It uses a JSON configuration file to define ingest jobs, and a plugin system to support any local file organization.
+The ingest client application lets users move data from local storage into the Boss, quickly and reliably. It supports Python 3.6 and later. It uses a JSON configuration file to define ingest jobs, and a plugin system to support any local file organization.
 
 Two types of ingest are supported:
 - Tile based
