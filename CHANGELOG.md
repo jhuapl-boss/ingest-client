@@ -1,5 +1,14 @@
 # Boss Ingest Client Changelog
 
+## 0.10.0
+
+*Dropping* support for Python 2
+
+### Implemented Enhancements:
+
+* New ingest complete functionality implemented
+
+
 ## 0.9.15
 
 ### Fixed Bug:

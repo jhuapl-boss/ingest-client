@@ -15,17 +15,16 @@
 
 from ingestclient.core.engine import Engine
 from ingestclient.core.config import ConfigFileError
-from ingestclient.core.backend import BossBackend
+from ingestclient.core.backend import BossBackend, IngestStatus, convert_backend_to_ingest_status
 from ingestclient import check_version
 from ingestclient.utils.log import always_log_info
 from ingestclient.utils.console import print_estimated_job
 
-from six.moves import input
-import datetime
 import argparse
-import sys
+import datetime
 import multiprocessing as mp
 import os
+import sys
 import time
 import logging
 
@@ -58,7 +57,7 @@ def get_confirmation(prompt, force=False):
         return True
 
 
-def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=None):
+def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=None, run_complete=True):
     """A worker process main execution function. Generates an engine, and joins the job
        (that was either created by the main process or joined by it).
        Ends when no more tasks are left that can be executed.
@@ -69,6 +68,7 @@ def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=
         pipe(multiprocessing.Pipe): the receiving end of the pipe that communicates with the master process.
         config_file(str): the path to the configuration file (configuration required if omitted)
         configuration(Configuration): a pre-loaded configuration object (config_file required if omitted)
+        run_complete (bool): Run ingest completion when done
 
     """
     always_log_info("Creating new worker process, pid={}.".format(os.getpid()))
@@ -81,7 +81,8 @@ def worker_process_run(api_token, job_id, pipe, config_file=None, configuration=
         engine = Engine(config_file=config_file,
                         configuration=configuration,
                         backend_api_token=api_token,
-                        ingest_job_id=job_id)
+                        ingest_job_id=job_id,
+                        run_complete=run_complete)
     except ConfigFileError as err:
         print("ERROR (pid: {}): {}".format(os.getpid(), err))
         sys.exit(1)
@@ -161,8 +162,11 @@ def start_workers(ingest_job_id, args, configuration):
         new_pipe = mp.Pipe(False)
         new_process = mp.Process(target=worker_process_run,
                                  args=(args.api_token, ingest_job_id, new_pipe[0]),
-                                 kwargs={'config_file': args.config_file, 'configuration': configuration}
-                                 )
+                                 kwargs={
+                                     'config_file': args.config_file,
+                                     'configuration': configuration,
+                                     'run_complete': not args.manual_complete
+                                 })
         workers.append((new_process, new_pipe[1]))
         new_process.start()
 
@@ -183,7 +187,7 @@ def upload(engine, args, configuration, start_time):
         start_time (float): When ingest client started in seconds since 1/1/1970 00:00.
 
     Returns:
-        (bool): True if uploading not finished.
+        (IngestStatus, int): STOP | UPLOAD | WAIT, wait seconds
     """
     workers = start_workers(engine.ingest_job_id, args, configuration)
 
@@ -233,17 +237,24 @@ def upload(engine, args, configuration, start_time):
         always_log_info("All upload tasks completed in {:.2f} minutes.".format((time.time() - start_time) / 60))
         if not args.manual_complete:
             always_log_info(" - Marking Ingest Job as complete and cleaning up. Please wait.")
-            if not engine.complete():
+            status, wait_secs = engine.complete()
+            if status == IngestStatus.UPLOAD:
                 always_log_info("Unable to complete, still have chunks that aren't ingested")
-                return True
-            always_log_info(" - Cleanup Done")
+                return status, 0
+            if status == IngestStatus.STOP:
+                always_log_info(" - Cleanup Done")
+                return status, 0
+            if status == IngestStatus.WAIT:
+                return status, wait_secs
+            raise Exception('Unknown status from engine.complete {}'.format(status))
         else:
             always_log_info(" - Auto-complete disabled. This ingest job will remain in the 'Uploading' state until you manually mark it as complete")
-            return False
+            return IngestStatus.STOP, 0
     else:
         always_log_info("Client exiting")
         always_log_info("Run time: {:.2f} minutes.".format((time.time() - start_time) / 60))
-        return False
+        return IngestStatus.UPLOAD, 0
+
 
 def main(configuration=None, parser_args=None):
     """Client UI main
@@ -324,7 +335,8 @@ def main(configuration=None, parser_args=None):
         engine = Engine(config_file=args.config_file,
                         backend_api_token=args.api_token,
                         ingest_job_id=args.job_id,
-                        configuration=configuration)
+                        configuration=configuration,
+                        run_complete=not args.manual_complete)
     except ConfigFileError as err:
         print("ERROR: {}".format(err))
         sys.exit(1)
@@ -381,12 +393,27 @@ def main(configuration=None, parser_args=None):
             sys.exit(0)
 
     # Join job
-    engine.join()
+    backend_status = engine.join()
 
+    status = convert_backend_to_ingest_status(backend_status)
     start_time = time.time()
-    while upload(engine, args, configuration, start_time):
-        pass
+    wait_secs = 0
+    while True:
+        if status == IngestStatus.STOP:
+            break
+        elif status == IngestStatus.WAIT:
+            new_status = engine.wait_on_queues(wait_secs)
+            if new_status == IngestStatus.STOP:
+                break
+            elif new_status == IngestStatus.COMPLETING:
+                always_log_info("Waiting on backend completion process")
+                if engine.wait_on_completing():
+                    break
 
+            # If we get here, return to uploading.  Messages back in upload queue.
+            always_log_info("Upload queue has new messages, resuming upload")
+
+        status, wait_secs = upload(engine, args, configuration, start_time)
 
 
 if __name__ == '__main__':
