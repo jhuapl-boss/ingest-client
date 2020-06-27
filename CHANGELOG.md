@@ -1,6 +1,6 @@
 # Boss Ingest Client Changelog
 
-## Unreleased
+## 0.10.0
 
 *Dropping* support for Python 2
 
