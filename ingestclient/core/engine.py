@@ -341,9 +341,10 @@ class Engine(object):
                         log_str = "Uploading ~{:.2f} {}/min".format(
                             avg_tile_rate * 6, units
                         )
-                        remaining_min = status["current_message_count"] / avg_tile_rate
-                        eta_text = "calculating ETA..."
-                        if remaining_min > 60*24:
+                        remaining_min = None if avg_tile_rate == 0 else status["current_message_count"] / avg_tile_rate
+                        if remaining_min is None:
+                            eta_text = "calculating ETA..."
+                        elif remaining_min > 60 * 24:
                             eta_text = "ETA: {:.2f} days".format(remaining_min / (60 * 24))
                         elif remaining_min > 60:
                             eta_text = "ETA: {:.2f} hours".format(remaining_min / 60)
