@@ -341,6 +341,8 @@ class Engine(object):
                         log_str = "Uploading ~{:.2f} {}/min".format(
                             avg_tile_rate * 6, units
                         )
+                        if avg_tile_rate == 0:
+                            avg_tile_rate == 1  # don't want divide by zero
                         remaining_min = status["current_message_count"] / avg_tile_rate
                         eta_text = "calculating ETA..."
                         if remaining_min > 60*24:
