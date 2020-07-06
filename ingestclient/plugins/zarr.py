@@ -19,8 +19,6 @@ from .path import PathProcessor
 from .chunk import ChunkProcessor, ZYX_ORDER
 import numpy as np
 import zarr
-from s3fs import S3FileSystem
-from gcsfs import GCSFileSystem
 
 
 class ZarrPathProcessor(PathProcessor):
@@ -82,14 +80,18 @@ class ZarrChunkProcessor(ChunkProcessor):
             None
         """
         self.parameters = parameters
-        self.backend = self.parameters.pop("backend", "S3")
-        self.bucket = self.parameters["bucket"]
+        self.cloud_path = self.parameters["cloud_path"]
         self.volume_name = self.parameters["volume_name"]
-
-        if self.backend == "S3":
+        self.bucket = self.cloud_path.split('//')[1]
+        
+        if self.cloud_path.startswith("s3://"):
+            from s3fs import S3FileSystem
             Zg = zarr.group(store=S3FileSystem().get_mapper(self.bucket))
-        elif self.backend == "GCS":
+        elif self.cloud_path.startswith("gs://"):
+            from gcsfs import GCSFileSystem
             Zg = zarr.group(store=GCSFileSystem().get_mapper(self.bucket))
+        else:
+            raise ValueError("Cloudpath parameter must either start with 's3://' or 'gs://'.")
         
         self.vol = Zg[self.volume_name]
 
