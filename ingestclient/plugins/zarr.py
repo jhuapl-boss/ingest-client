@@ -19,6 +19,7 @@ from .path import PathProcessor
 from .chunk import ChunkProcessor, ZYX_ORDER
 import numpy as np
 import zarr
+from s3fs import S3FileSystem
 from gcsfs import GCSFileSystem
 
 
@@ -72,18 +73,24 @@ class ZarrChunkProcessor(ChunkProcessor):
 
         Args:
             parameters (dict): Parameters for the dataset to be processed. Must
-                include keys "gs_bucket" (the name of the FQ bucket file path,
-                for example `"gs://X/Y/Z/data.zarr"`) and "volume_name", which
-                is the name of the volume in the zarr file (e.g. "raw")
+                include the following keys:
+                "backend" : [S3, GCS] for Amazon S3 and Google Cloud Service, respectively.
+                "bucket" : name of the S3 or GCS bucket containing zarr file. 
+                "volume_name" name of the volume in the zarr file (e.g. "raw")
 
         Returns:
             None
         """
         self.parameters = parameters
-        self.ingest_job = self.parameters.pop("ingest_job")
-        self.gs_bucket = self.parameters["gs_bucket"]
+        self.backend = self.parameters.pop("backend", "S3")
+        self.bucket = self.parameters["bucket"]
         self.volume_name = self.parameters["volume_name"]
-        Zg = zarr.group(store=GCSFileSystem(token="cache").get_mapper(self.gs_bucket))
+
+        if self.backend == "S3":
+            Zg = zarr.group(store=S3FileSystem().get_mapper(self.bucket))
+        elif self.backend == "GCS":
+            Zg = zarr.group(store=GCSFileSystem().get_mapper(self.bucket))
+        
         self.vol = Zg[self.volume_name]
 
     def process(self, file_path, x_index, y_index, z_index):
