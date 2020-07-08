@@ -80,6 +80,7 @@ class ZarrChunkProcessor(ChunkProcessor):
             None
         """
         self.parameters = parameters
+        self.ingest_job = self.parameters.pop("ingest_job")
         self.cloud_path = self.parameters["cloud_path"]
         self.volume_name = self.parameters["volume_name"]
         self.bucket = self.cloud_path.split('//')[1]
