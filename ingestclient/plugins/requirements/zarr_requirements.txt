@@ -1,0 +1,3 @@
+zarr
+s3fs
+gcsfs
