@@ -5,9 +5,8 @@ requests>=2.11.1
 responses>=0.9.0
 boto3>=1.4.0
 
-# 1.3.8 adds cfn-lint which has an dependency on aws-sam-translator 1.11.0
-# which breaks during installation with Python 3.5.
-moto==1.3.7
+# moto lower then 1.3.16 creates unit tests to fail
+moto>=1.3.16
 Pillow>=3.3.1
 numpy>=1.11.1
 intern<1.0.0
