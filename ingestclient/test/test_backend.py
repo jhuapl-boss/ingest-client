@@ -27,17 +27,18 @@ import six
 class ResponsesMixin(object):
     """Mixin to setup requests mocking for the test class"""
     def setUp(self):
-        responses._default_mock.__enter__()
+        self.resp_mock = responses.RequestsMock(assert_all_requests_are_fired=False)
+        self.resp_mock.__enter__()
         self.add_default_response()
         super(ResponsesMixin, self).setUp()
 
     def tearDown(self):
         super(ResponsesMixin, self).tearDown()
-        responses._default_mock.__exit__(None, None, None)
+        self.resp_mock.__exit__(None, None, None)
 
     def add_default_response(self):
         mocked_repsonse = {"id": 23}
-        responses.add(responses.POST, 'https://api.theboss.io/latest/ingest/',
+        self.resp_mock.add(responses.POST, 'https://api.theboss.io/latest/ingest/',
                       json=mocked_repsonse, status=201)
 
         mocked_repsonse = {"ingest_job": {"id": 23,
@@ -55,10 +56,10 @@ class ResponsesMixin(object):
                            "credentials": self.aws_creds,
                            "resource": {"resource": "stuff"}
                            }
-        responses.add(responses.GET, 'https://api.theboss.io/latest/ingest/23',
+        self.resp_mock.add(responses.GET, 'https://api.theboss.io/latest/ingest/23',
                       json=mocked_repsonse, status=200)
 
-        responses.add(responses.DELETE, 'https://api.theboss.io/latest/ingest/23', status=204)
+        self.resp_mock.add(responses.DELETE, 'https://api.theboss.io/latest/ingest/23', status=204)
 
 
 class BossBackendTestMixin(object):
