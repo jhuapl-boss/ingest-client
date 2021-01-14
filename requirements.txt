@@ -1,12 +1,11 @@
-mock==2.0.0
+mock>=4.0.3
 jsonschema>=2.5.1
-six>=1.10.0
-requests>=2.11.1
+requests>=2.25.1
 responses>=0.12.1
-boto3>=1.4.0
+boto3>=1.16.54
 
 # moto lower then 1.3.16 creates unit tests to fail
 moto>=1.3.16
 Pillow>=3.3.1
 numpy>=1.11.1
-intern<1.0.0
+intern>=1.2.0
