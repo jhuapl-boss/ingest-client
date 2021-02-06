@@ -1,4 +1,4 @@
-# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2021 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,11 +17,17 @@ from PIL import Image
 from intern.remote.boss import BossRemote
 from intern.resource.boss.resource import ChannelResource
 from intern.service.boss.v1.volume import CacheMode
+import intern
 import numpy as np
 import time
 
+from .chunk import ChunkProcessor, XYZT_ORDER
+
 from .path import PathProcessor
 from .tile import TileProcessor
+
+_DEFAULT_BOSS_HOST = "api.bossdb.io"
+_DEFAULT_BOSS_PROTOCOL = "https"
 
 
 class InternPathProcessor(PathProcessor):
@@ -143,3 +149,82 @@ class InternTileProcessor(TileProcessor):
 
         # Send handle back
         return output
+
+
+
+class InternChunkProcessor(ChunkProcessor):
+    """Chunk processor for intern cutouts."""
+
+    def __init__(self):
+        ChunkProcessor.__init__(self)
+        self.vol = None
+        self.ingest_job = None
+
+    def setup(self, parameters):
+        """Method to load the file for uploading data. 
+
+        Args:
+            parameters (dict): Parameters for the dataset to be processed
+
+        Returns:
+            None
+
+        Required parameters are:
+            uri (str): of the form bossdb://collection/experiment/channel
+        Optional:
+            host
+            protocol
+            token
+
+        """
+        self.parameters = parameters
+
+        # Remove 'ingest_job' key so rest of parameters can be passed to the
+        # CloudVolume constructor.
+        self.ingest_job = self.parameters.pop("ingest_job")
+
+        host = self.parameters.get("host", _DEFAULT_BOSS_HOST)
+        protocol = self.parameters.get("protocol", _DEFAULT_BOSS_PROTOCOL)
+        token = self.parameters.get("token", None)
+        uri = self.parameters["uri"]
+        
+        self.vol = intern.array(uri, boss_config=({
+            "token": token,
+            "host": host,
+            "protocol": protocol
+        } if token else None))
+
+    def process(self, file_path, x_index, y_index, z_index):
+        """
+        Method to take a chunk indices and return an ndarray with the correct data
+
+        Args:
+            file_path(str): An absolute file path for the specified chunk
+            x_index(int): The tile index in the X dimension
+            y_index(int): The tile index in the Y dimension
+            z_index(int): The tile index in the Z dimension
+
+        Returns:
+            (np.ndarray, int): ndarray for the specified chunk, XYZT_ORDER
+        """
+        x_size = self.ingest_job["chunk_size"]["x"]
+        y_size = self.ingest_job["chunk_size"]["y"]
+        z_size = self.ingest_job["chunk_size"]["z"]
+
+        x_start = x_index * x_size
+        y_start = y_index * y_size
+        z_start = z_index * z_size
+
+        x_stop = x_start + x_size
+        y_stop = y_start + y_size
+        z_stop = z_start + z_size
+
+        if x_stop > self.vol.shape[2]:
+            x_stop = self.vol.shape[2]
+        if y_stop > self.vol.shape[1]:
+            y_stop = self.vol.shape[1]
+        if z_stop > self.vol.shape[0]:
+            z_stop = self.vol.shape[0]
+
+        cutout = self.vol[z_start:z_stop, y_start:y_stop, x_start:x_stop]
+        return cutout, XYZT_ORDER
