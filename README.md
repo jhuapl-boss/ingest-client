@@ -148,6 +148,8 @@ There are three primary operations you can perform with the ingest client: Creat
 		boss-ingest <absolute_path_to_config_file> -p <number_of_processes>
 		```
 
+	- If you are using multiple parallel client processes, you may choose to optionally pass a `--ramp_seconds`/`-r` flag with a number of seconds to delay in between creating processes. This is helpful when the source of ingest data needs time to scale (e.g. google cloud storage buckets, or a load-balanced web server).
+
 - **Logging**
 	-   You can choose where to write the log file by specifying and absolute file path suing the -l parameter. If omitted, data is logged in `~/.boss-ingest`
 

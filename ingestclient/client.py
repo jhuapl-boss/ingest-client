@@ -139,6 +139,9 @@ def get_parser():
     parser.add_argument("--processes_nb", "-p", type=int,
                         default=1,
                         help="The number of client processes that will upload the images of the ingest job.")
+    parser.add_argument("--ramp_seconds", "-r", type=int,
+                        default=1,
+                        help="The number of seconds to wait in between provisioning client processes.")
     parser.add_argument("config_file", nargs='?', help="Path to the ingest job configuration file")
 
     return parser
@@ -171,7 +174,7 @@ def start_workers(ingest_job_id, args, configuration):
         new_process.start()
 
         # Sleep to slowly ramp up load on lambda
-        time.sleep(.5)
+        time.sleep(args.ramp_seconds)
 
     return workers
 
