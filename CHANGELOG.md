@@ -3,6 +3,7 @@
 ## 0.11.0
 
 * Added an optional `--ramp_seconds` / `-r` flag to delay the creation of parallel processes. A ramp value of 10 will wait ten seconds in between creating new processes. This is helpful when the source of the ingest data needs time to scale (e.g. Google Cloud Storage).
+* Add an intern chunk processor for ingesting large cutouts.
 
 ## 0.10.0
 
