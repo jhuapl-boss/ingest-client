@@ -21,7 +21,7 @@ import intern
 import numpy as np
 import time
 
-from .chunk import ChunkProcessor, XYZT_ORDER
+from .chunk import ChunkProcessor, ZYX_ORDER
 
 from .path import PathProcessor
 from .tile import TileProcessor
@@ -205,7 +205,7 @@ class InternChunkProcessor(ChunkProcessor):
             z_index(int): The tile index in the Z dimension
 
         Returns:
-            (np.ndarray, int): ndarray for the specified chunk, XYZT_ORDER
+            (np.ndarray, int): ndarray for the specified chunk, ZYX_ORDER
         """
         x_size = self.ingest_job["chunk_size"]["x"]
         y_size = self.ingest_job["chunk_size"]["y"]
@@ -227,4 +227,4 @@ class InternChunkProcessor(ChunkProcessor):
             z_stop = self.vol.shape[0]
 
         cutout = self.vol[z_start:z_stop, y_start:y_stop, x_start:x_stop]
-        return cutout, XYZT_ORDER
+        return cutout, ZYX_ORDER
