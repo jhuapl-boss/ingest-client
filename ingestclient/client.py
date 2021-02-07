@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019 The Johns Hopkins University Applied Physics Laboratory
+# Copyright 2021 The Johns Hopkins University Applied Physics Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -139,6 +139,9 @@ def get_parser():
     parser.add_argument("--processes_nb", "-p", type=int,
                         default=1,
                         help="The number of client processes that will upload the images of the ingest job.")
+    parser.add_argument("--ramp_seconds", "-r", type=int,
+                        default=1,
+                        help="The number of seconds to wait in between provisioning client processes.")
     parser.add_argument("config_file", nargs='?', help="Path to the ingest job configuration file")
 
     return parser
@@ -171,7 +174,7 @@ def start_workers(ingest_job_id, args, configuration):
         new_process.start()
 
         # Sleep to slowly ramp up load on lambda
-        time.sleep(.5)
+        time.sleep(args.ramp_seconds)
 
     return workers
 
