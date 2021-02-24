@@ -564,6 +564,7 @@ class BossBackend(Backend):
             (str, str, dict): message_id, receipt_handle, message contents
         """
         try_cnt = 0
+        msg = None
         while try_cnt < 19:
             try:
                 msg = self.upload_queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=1)
