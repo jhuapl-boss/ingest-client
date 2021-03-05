@@ -178,7 +178,7 @@ class ZindexStackTileProcessor(TileProcessor):
 
 EXTENSIONS =  {
     'TIFF': ['TIF', 'TIFF'],
-    'JPG' : ['JPG', 'JPEG']
+    'JPEG' : ['JPG', 'JPEG']
 }
 
 def canonical_extension(extension):
