@@ -484,7 +484,6 @@ class BossBackend(Backend):
                     params = {}
                     params["upload_queue"] = result["ingest_job"]["upload_queue"]
                     params["ingest_queue"] = result["ingest_job"]["ingest_queue"]
-                    params["ingest_lambda"] = result["ingest_lambda"]
                     params["KVIO_SETTINGS"] = result["KVIO_SETTINGS"]
                     params["STATEIO_CONFIG"] = result["STATEIO_CONFIG"]
                     params["OBJECTIO_CONFIG"] = result["OBJECTIO_CONFIG"]
