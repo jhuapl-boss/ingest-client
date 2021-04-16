@@ -569,6 +569,8 @@ class BossBackend(Backend):
                 msg = self.upload_queue.receive_messages(MaxNumberOfMessages=1, WaitTimeSeconds=1)
                 break
             except botocore.exceptions.ClientError as e:
+                if type(e).__name__ == 'QueueDoesNotExist':
+                    raise Exception(f'(pid={os.getpid()}) upload queue no longer exists.  Ingest canceled or completed')
                 print("(pid={}) Waiting for credentials to be valid".format(os.getpid()))
                 try_cnt += 1
                 time.sleep(15)
@@ -614,7 +616,9 @@ class BossBackend(Backend):
                         break
 
                 time.sleep(get_wait_time(try_cnt))
-            except botocore.exceptions.ClientError:
+            except botocore.exceptions.ClientError as e:
+                if type(e).__name__ == 'QueueDoesNotExist':
+                    raise Exception(f'(pid={os.getpid()}) upload queue no longer exists.  Ingest canceled or completed')
                 print("(pid={}) Waiting for credentials to be valid".format(os.getpid()))
                 try_cnt += 1
                 time.sleep(15)

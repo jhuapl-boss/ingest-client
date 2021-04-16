@@ -278,7 +278,7 @@ class Engine(object):
         print('.')
         if status == BackendStatus.COMPLETE:
             return True
-        if status == BackendStatus.UPLOADING:
+        if status == BackendStatus.UPLOADING or status == BackendStatus.WAIT_ON_QUEUES:
             return False
 
         raise Exception('Got unexpected ingest status: {}'.format(status))
