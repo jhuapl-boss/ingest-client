@@ -1,5 +1,10 @@
 # Boss Ingest Client Changelog
 
+## 0.12.0
+
+* Accept WAIT_ON_QUEUES as valid ingest job status.
+* Exit out if upload queue no longer exists (non-existence indicates job complete or cancelled).
+
 ## 0.11.0
 
 * Added an optional `--ramp_seconds` / `-r` flag to delay the creation of parallel processes. A ramp value of 10 will wait ten seconds in between creating new processes. This is helpful when the source of the ingest data needs time to scale (e.g. Google Cloud Storage).
@@ -11,7 +16,7 @@
 
 ### Implemented Enhancements:
 
-* New ingest complete functionality implemented
+* New ingest complete functionality implemented.
 
 
 ## 0.9.15
