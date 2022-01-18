@@ -207,6 +207,12 @@ class InternChunkProcessor(ChunkProcessor):
         Returns:
             (np.ndarray, int): ndarray for the specified chunk, ZYX_ORDER
         """
+
+        # Get offsets. 
+        x_offset = self.ingest_job["extent"]["x"][0]
+        y_offset = self.ingest_job["extent"]["y"][0]
+        z_offset = self.ingest_job["extent"]["z"][0]
+
         x_size = self.ingest_job["chunk_size"]["x"]
         y_size = self.ingest_job["chunk_size"]["y"]
         z_size = self.ingest_job["chunk_size"]["z"]
@@ -215,16 +221,23 @@ class InternChunkProcessor(ChunkProcessor):
         y_start = y_index * y_size
         z_start = z_index * z_size
 
-        x_stop = x_start + x_size
-        y_stop = y_start + y_size
-        z_stop = z_start + z_size
+        if x_start < x_offset:
+            x_start = x_offset
+        if y_start < y_offset:
+            y_start = y_offset
+        if z_start < z_offset:
+            z_start = z_offset
 
-        if x_stop > self.vol.shape[2]:
-            x_stop = self.vol.shape[2]
-        if y_stop > self.vol.shape[1]:
-            y_stop = self.vol.shape[1]
-        if z_stop > self.vol.shape[0]:
-            z_stop = self.vol.shape[0]
+        x_stop = x_start + x_size 
+        y_stop = y_start + y_size 
+        z_stop = z_start + z_size 
+
+        if x_stop > self.ingest_job["extent"]["x"][1]:
+            x_stop = self.ingest_job["extent"]["x"][1]
+        if y_stop > self.ingest_job["extent"]["y"][1]:
+            y_stop = self.ingest_job["extent"]["y"][1]
+        if z_stop > self.ingest_job["extent"]["z"][1]:
+            z_stop = self.ingest_job["extent"]["z"][1]
 
         cutout = self.vol[z_start:z_stop, y_start:y_stop, x_start:x_stop]
         return cutout, ZYX_ORDER
